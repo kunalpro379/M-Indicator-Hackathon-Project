@@ -118,6 +118,9 @@ const getRoleBasedPath = (user) => {
       // Officers WITHOUT department_id → government portal
       if (user?.id) return `/government/${user.id}/dashboard`;
       return '/officials-portal/authentication';
+    case 'government_official':
+      // Government officials should NOT have department_id
+      return user?.id ? `/government/${user.id}` : '/officials-portal/authentication';
     case 'citizen':
       return user?.id ? `/citizen/${user.id}` : '/citizen';
     default:

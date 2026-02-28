@@ -56,7 +56,7 @@ const GrievanceList = () => {
   const [selectedCommentsGrievance, setSelectedCommentsGrievance] = useState(null);
 
   useEffect(() => {
-    if (!depId) {
+    if (!departmentId) {
       setApiLoading(false);
       return;
     }
@@ -67,7 +67,7 @@ const GrievanceList = () => {
     }
     let cancelled = false;
     setApiLoading(true);
-    departmentDashboardService.getGrievances(depId, token, {})
+    departmentDashboardService.getGrievances(departmentId, token, {})
       .then((res) => {
         if (!cancelled && res.success) {
           setGrievancesFromApi((res.data || []).map(mapApiGrievanceToUi));

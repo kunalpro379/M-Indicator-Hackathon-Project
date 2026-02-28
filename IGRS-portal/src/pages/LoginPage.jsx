@@ -47,6 +47,10 @@ export default function LoginPage() {
           setError('Your account is not properly configured. Please contact admin.');
           return;
         }
+      } else if (response.user.role === 'government_official') {
+        // Government officials should NOT have department_id
+        console.log('➡️ Redirecting to government officer portal');
+        navigate(`/government/${response.user.id}`);
       } else {
         console.log('➡️ Unknown role, redirecting to home');
         navigate('/');

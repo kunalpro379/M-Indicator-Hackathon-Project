@@ -58,6 +58,8 @@ const Login = () => {
         return '/officer/dashboard';
       case 'department_head':
         return '/department/dashboard';
+      case 'government_official':
+        return '/government/dashboard';
       case 'citizen':
         return '/citizen/portal';
       default:
