@@ -1,0 +1,10 @@
+crawl4ai
+azure-storage-queue
+azure-storage-blob
+python-dotenv
+psutil
+beautifulsoup4
+aiofiles
+pypdf2
+pdfplumber
+requests
