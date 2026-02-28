@@ -13,6 +13,11 @@ __pycache__/
 *.pyd
 .Python
 
+# Jupyter Notebooks with secrets
+Notebooks/Improved_IGRSAgent.ipynb
+Notebooks/Improved_IGRSAgent (1).ipynb
+Notebooks/IGRSAgent.ipynb
+
 # IDE
 .vscode/
 .idea/
