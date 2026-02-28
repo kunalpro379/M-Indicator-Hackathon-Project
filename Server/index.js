@@ -33,6 +33,7 @@ import rolesRoutes from './src/routes/roles.routes.js';
 import commentsRoutes from './src/routes/comments.routes.js';
 import whatsappRoutes from './src/routes/whatsapp.routes.js';
 import whatsappAdminRoutes from './src/routes/whatsapp-admin.routes.js';
+import progressReportsRoutes from './src/routes/progress-reports.routes.js';
 
 // Import services
 import pool from './src/config/database.js';
@@ -129,6 +130,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/roles', rolesRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/whatsapp-admin', whatsappAdminRoutes);
+app.use('/api/progress-reports', progressReportsRoutes);
 
 // 404 handler
 app.use((req, res) => {

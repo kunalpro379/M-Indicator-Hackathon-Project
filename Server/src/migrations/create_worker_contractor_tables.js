@@ -65,7 +65,7 @@ async function createWorkerContractorTables() {
       );
     `);
 
-    // Create indexes
+    // Create indexes for daily reports
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_daily_reports_user_date 
       ON daily_reports(user_id, date DESC);
@@ -74,16 +74,6 @@ async function createWorkerContractorTables() {
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_daily_reports_date 
       ON daily_reports(date DESC);
-    `);
-
-    await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_contractors_status 
-      ON contractors(verification_status);
-    `);
-
-    await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_contractors_user 
-      ON contractors(user_id);
     `);
 
     // Update users table to support field_worker and contractor roles
@@ -116,6 +106,27 @@ async function createWorkerContractorTables() {
 
     await client.query('COMMIT');
     console.log('✅ Worker and contractor tables created successfully');
+
+    // Create contractor indexes separately (outside transaction to avoid abort issues)
+    try {
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_contractors_status 
+        ON contractors(verification_status);
+      `);
+      console.log('✅ Created idx_contractors_status');
+    } catch (err) {
+      console.log('⚠️  Skipping idx_contractors_status:', err.message);
+    }
+
+    try {
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_contractors_user 
+        ON contractors(user_id);
+      `);
+      console.log('✅ Created idx_contractors_user');
+    } catch (err) {
+      console.log('⚠️  Skipping idx_contractors_user:', err.message);
+    }
 
   } catch (error) {
     await client.query('ROLLBACK');
