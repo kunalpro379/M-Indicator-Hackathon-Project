@@ -1,18 +1,25 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   LayoutDashboard, FileText, TrendingUp, Users, AlertTriangle, Activity,
   Clock, CheckCircle, Briefcase, MapPin, ChevronRight, Loader, DollarSign, BarChart3,
-  Eye, Pencil, Search, X, MessageSquare, Wrench, BookOpen, ScrollText, UserPlus, AlertCircle as AlertCircleIcon, Link as LinkIcon
+  Eye, Pencil, Search, X, MessageSquare, Wrench, BookOpen, ScrollText, UserPlus, AlertCircle as AlertCircleIcon, Link as LinkIcon,
+  Map as MapIcon, Maximize2, Minimize2, Calendar, Building2, Sparkles, ExternalLink, Image as ImageIcon
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import L from 'leaflet';
 import departmentDashboardService from '../../services/departmentDashboard.service';
 import { useAuth } from '../../context/AuthContext';
 import PremiumHeader from './components/PremiumHeader';
 import BudgetManagement from './components/BudgetManagement';
+import LocationDisplay from '../../components/LocationDisplay';
+import JsonRenderer from '../../components/JsonRenderer';
+import { grievanceService } from '../../services/grievance.service';
 
 // Fix default marker icon in react-leaflet
 const defaultIcon = L.icon({
@@ -48,6 +55,15 @@ const DepartmentDashboardNew = () => {
   const [selectedGrievanceId, setSelectedGrievanceId] = useState(null);
   const [grievanceDetail, setGrievanceDetail] = useState(null);
   const [grievanceDetailLoading, setGrievanceDetailLoading] = useState(false);
+  const [mapExpanded, setMapExpanded] = useState(false);
+  const [showCommentsModal, setShowCommentsModal] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [submittingComment, setSubmittingComment] = useState(false);
+  
+  // Map refs
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markersLayerRef = useRef(null);
   const [analyticsData, setAnalyticsData] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [staff, setStaff] = useState([]);
@@ -606,6 +622,186 @@ const DepartmentDashboardNew = () => {
     if (v === 'resolved' || v === 'closed') return 'bg-emerald-600 text-white';
     return 'bg-stone-200 text-stone-800';
   };
+
+  // Enhanced helper functions for citizen-like view
+  const formatDate = (d) => {
+    if (!d) return "—";
+    const date = new Date(d);
+    return date.toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const isImageUrl = (path) => {
+    if (!path || typeof path !== "string") return false;
+    const lower = path.toLowerCase();
+    return /\.(jpe?g|png|gif|webp)(\?|$)/i.test(lower) || lower.includes("blob") && !lower.includes(".pdf");
+  };
+
+  const formatStatus = (status, grievance = null) => {
+    const s = String(status || "").toLowerCase();
+    if (s === "resolved") return "Resolved";
+    if (s === "rejected") return "Rejected";
+    if (s === "in_progress") return "Under Working";
+    if (s === "assigned") return "Accepted by Department";
+    if (s === "submitted" || s === "pending" || !status) return "Submitted";
+    return status;
+  };
+
+  const getStatusColor = (status, grievance = null) => {
+    const display = formatStatus(status, grievance);
+    const d = String(display).toLowerCase();
+    if (d === "resolved") return "bg-green-100 text-green-800";
+    if (d === "accepted by department") return "bg-blue-100 text-blue-800";
+    if (d === "under working") return "bg-yellow-100 text-yellow-800";
+    if (d === "rejected") return "bg-red-100 text-red-800";
+    return "bg-gray-100 text-gray-800";
+  };
+
+  // Build enhanced timeline
+  const buildTimeline = (grievance) => {
+    const timeline = [];
+    
+    timeline.push({
+      stage: "submitted",
+      label: "Grievance Submitted",
+      description: "Grievance has been received",
+      at: grievance.created_at,
+      icon: FileText,
+      completed: true
+    });
+    
+    if (grievance.department_id || grievance.assigned_officer_id) {
+      timeline.push({
+        stage: "accepted",
+        label: "Accepted by Department",
+        description: grievance.department_name ? `Assigned to ${grievance.department_name}` : "Assigned to department",
+        at: grievance.updated_at,
+        icon: Building2,
+        completed: true
+      });
+    }
+    
+    const status = String(grievance.status || "").toLowerCase();
+    if (status === "in_progress" || status === "assigned") {
+      timeline.push({
+        stage: "working",
+        label: "Under Working",
+        description: grievance.officer_name ? `Being handled by ${grievance.officer_name}` : "Work in progress",
+        at: grievance.updated_at,
+        icon: Activity,
+        completed: status === "in_progress"
+      });
+    }
+    
+    if (status === "resolved") {
+      timeline.push({
+        stage: "resolved",
+        label: "Resolved",
+        description: "Grievance has been successfully resolved",
+        at: grievance.resolved_at || grievance.updated_at,
+        icon: CheckCircle,
+        completed: true
+      });
+    } else if (status === "rejected") {
+      timeline.push({
+        stage: "rejected",
+        label: "Rejected",
+        description: "Grievance was rejected",
+        at: grievance.updated_at,
+        icon: X,
+        completed: true
+      });
+    }
+    
+    return timeline;
+  };
+
+  // Map initialization and update functions
+  const initializeMap = (data) => {
+    if (mapInstanceRef.current || !mapRef.current) return;
+
+    const map = L.map(mapRef.current, {
+      center: [20.5937, 78.9629],
+      zoom: 5,
+      zoomControl: true,
+      scrollWheelZoom: true
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19
+    }).addTo(map);
+
+    markersLayerRef.current = L.markerClusterGroup({
+      chunkedLoading: true,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: true,
+      maxClusterRadius: 50
+    });
+
+    map.addLayer(markersLayerRef.current);
+    mapInstanceRef.current = map;
+
+    updateMapMarkers(data);
+  };
+
+  const updateMapMarkers = (data) => {
+    if (!markersLayerRef.current) return;
+
+    markersLayerRef.current.clearLayers();
+
+    const validGrievances = data.filter(g => 
+      g.latitude && g.longitude && 
+      !isNaN(g.latitude) && !isNaN(g.longitude) &&
+      g.latitude >= -90 && g.latitude <= 90 &&
+      g.longitude >= -180 && g.longitude <= 180
+    );
+
+    validGrievances.forEach(grievance => {
+      const marker = L.marker([grievance.latitude, grievance.longitude]);
+      
+      const popupContent = `
+        <div style="font-family: sans-serif; min-width: 200px;">
+          <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #1A1A1A;">
+            ${grievance.grievance_id || 'N/A'}
+          </h3>
+          <p style="margin: 4px 0; font-size: 12px; color: #6B6B6B;">
+            <strong>Status:</strong> ${formatStatus(grievance.status, grievance)}
+          </p>
+          <p style="margin: 4px 0; font-size: 12px; color: #6B6B6B;">
+            <strong>Category:</strong> ${getCategoryLabel(grievance.category) || 'N/A'}
+          </p>
+          <p style="margin: 4px 0; font-size: 12px; color: #6B6B6B;">
+            <strong>Location:</strong> ${grievance.location || grievance.location_address || 'N/A'}
+          </p>
+          <button 
+            onclick="window.dispatchEvent(new CustomEvent('openGrievanceDetail', { detail: '${grievance.grievance_id}' }))"
+            style="margin-top: 8px; padding: 6px 12px; background: #7D6E5C; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;"
+          >
+            View Details
+          </button>
+        </div>
+      `;
+
+      marker.bindPopup(popupContent, { maxWidth: 250 });
+      markersLayerRef.current.addLayer(marker);
+    });
+
+    if (validGrievances.length > 0 && mapInstanceRef.current) {
+      const bounds = L.latLngBounds(
+        validGrievances.map(g => [g.latitude, g.longitude])
+      );
+      mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] });
+    }
+  };
+
+  // Define filteredGrievances first before using it in useEffect
   const filteredGrievances = useMemo(() => {
     if (!grievanceSearch.trim()) return grievances;
     const q = grievanceSearch.trim().toLowerCase();
@@ -618,6 +814,35 @@ const DepartmentDashboardNew = () => {
         getCategoryLabel(g.category).toLowerCase().includes(q)
     );
   }, [grievances, grievanceSearch]);
+
+  // Listen for custom event to open detail modal from map
+  useEffect(() => {
+    const handleOpenDetail = (e) => {
+      setSelectedGrievanceId(e.detail);
+    };
+    window.addEventListener('openGrievanceDetail', handleOpenDetail);
+    return () => window.removeEventListener('openGrievanceDetail', handleOpenDetail);
+  }, []);
+
+  // Initialize map when grievances load
+  useEffect(() => {
+    if (activeTab === 'grievances' && grievances.length > 0 && mapRef.current) {
+      setTimeout(() => initializeMap(grievances), 100);
+    }
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, [activeTab, grievances]);
+
+  // Update map when filtered grievances change
+  useEffect(() => {
+    if (mapInstanceRef.current && filteredGrievances.length > 0) {
+      updateMapMarkers(filteredGrievances);
+    }
+  }, [filteredGrievances]);
 
   if (loading) {
     return (
@@ -1077,56 +1302,6 @@ const DepartmentDashboardNew = () => {
                 </div>
               </div>
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* Zone Performance Overview */}
-      {zonePerformance && zonePerformance.length > 0 && (
-        <div className="bg-white rounded-xl border border-stone-200 p-8 shadow-lg">
-          <h3 className="text-xl font-bold text-stone-900 mb-6">Zone Performance Overview</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-stone-800 text-white">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Zone</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Active</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Resolution Rate</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Avg Time</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Staff</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Utilization</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Risk Level</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-200">
-                {zonePerformance.map((zone, idx) => (
-                  <tr key={idx} className="hover:bg-stone-50">
-                    <td className="px-4 py-3 text-sm font-semibold text-stone-900">{zone.zone}</td>
-                    <td className="px-4 py-3 text-sm text-stone-700">{zone.active}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-stone-200 rounded-full h-2">
-                          <div className="bg-stone-800 h-2 rounded-full" style={{ width: `${zone.resolutionRate}%` }}></div>
-                        </div>
-                        <span className="text-sm text-stone-700">{zone.resolutionRate}%</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-stone-700">{zone.avgTime}</td>
-                    <td className="px-4 py-3 text-sm text-stone-700">{zone.staff}</td>
-                    <td className="px-4 py-3 text-sm text-stone-700">{zone.utilization}%</td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded ${
-                        zone.riskLevel === 'High' ? 'bg-red-100 text-red-800' :
-                        zone.riskLevel === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
-                        {zone.riskLevel}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         </div>
       )}
