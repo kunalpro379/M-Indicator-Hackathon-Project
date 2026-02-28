@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  TrendingUp, Users, Clock, CheckCircle, AlertTriangle, 
+  TrendingUp, Users, Clock, CheckCircle, CheckCircle2, AlertTriangle, 
   MapPin, DollarSign, BarChart3, Activity
 } from 'lucide-react';
 
@@ -86,40 +86,137 @@ const CityCommissionerDashboard = ({ data }) => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Ward Performance */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Ward Performance */}
+            {/* Ward Performance - Grid of Cards */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="bg-white rounded-2xl p-6 shadow-lg border-2 border-[#D4AF37]"
             >
               <h3 className="text-2xl font-bold text-black mb-6 flex items-center gap-2">
                 <MapPin className="w-6 h-6 text-[#D4AF37]" />
                 Ward Performance
               </h3>
-              <div className="space-y-4">
-                {wardPerformance.length > 0 ? wardPerformance.map((ward, index) => (
-                  <div key={index} className="p-4 bg-gradient-to-br from-[#FFF8F0] to-[#FFF5E8] rounded-xl border border-[#D4AF37]">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h4 className="font-bold text-black">{ward.ward_name || `Ward ${ward.ward_number}`}</h4>
-                        <p className="text-sm text-gray-600">Total: {ward.total_grievances} | Resolved: {ward.resolved}</p>
+              
+              {/* Ward Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {wardPerformance.length > 0 ? wardPerformance.map((ward, index) => {
+                  const resolutionRate = ward.total_grievances > 0 
+                    ? Math.round((ward.resolved / ward.total_grievances) * 100) 
+                    : 0;
+                  
+                  const getPerformanceBadge = () => {
+                    if (ward.total_grievances === 0) return { label: 'No Data', color: 'bg-gray-100 text-gray-700' };
+                    if (resolutionRate >= 70) return { label: 'Excellent', color: 'bg-green-100 text-green-700' };
+                    if (resolutionRate >= 50) return { label: 'Good', color: 'bg-yellow-100 text-yellow-700' };
+                    return { label: 'Needs Attention', color: 'bg-red-100 text-red-700' };
+                  };
+                  
+                  const performanceBadge = getPerformanceBadge();
+                  
+                  return (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border-2 border-[#D4AF37] hover:-translate-y-1"
+                    >
+                      {/* Card Header */}
+                      <div className="bg-gradient-to-r from-black to-gray-900 p-6 text-white">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-[#D4AF37] rounded-lg">
+                              <MapPin className="w-6 h-6 text-black" />
+                            </div>
+                            <div>
+                              <h3 className="text-xl font-bold">{ward.ward_name || `Ward ${ward.ward_number}`}</h3>
+                              <p className="text-gray-300 text-sm">Ward #{ward.ward_number || 'N/A'}</p>
+                            </div>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${performanceBadge.color}`}>
+                            {performanceBadge.label}
+                          </span>
+                        </div>
+                        
+                        {/* Total Grievances */}
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-4xl font-bold">{ward.total_grievances}</span>
+                          <span className="text-gray-300">Total Grievances</span>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-[#D4AF37]">
-                          {ward.total_grievances > 0 ? Math.round((ward.resolved / ward.total_grievances) * 100) : 0}%
-                        </p>
-                        <p className="text-xs text-gray-600">Resolution Rate</p>
+
+                      {/* Card Body - Statistics */}
+                      <div className="p-6 bg-gradient-to-br from-[#FFF8F0] to-white">
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                          {/* Resolved */}
+                          <div className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-[#D4AF37] shadow-sm">
+                            <CheckCircle2 className="w-8 h-8 text-green-600" />
+                            <div>
+                              <p className="text-2xl font-bold text-black">{ward.resolved}</p>
+                              <p className="text-xs text-gray-600">Resolved</p>
+                            </div>
+                          </div>
+
+                          {/* Pending */}
+                          <div className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-[#D4AF37] shadow-sm">
+                            <Clock className="w-8 h-8 text-yellow-600" />
+                            <div>
+                              <p className="text-2xl font-bold text-black">{ward.total_grievances - ward.resolved}</p>
+                              <p className="text-xs text-gray-600">Pending</p>
+                            </div>
+                          </div>
+
+                          {/* Overdue */}
+                          {ward.overdue > 0 && (
+                            <div className="col-span-2 flex items-center gap-3 p-3 bg-red-50 rounded-lg border-2 border-red-300 shadow-sm">
+                              <AlertTriangle className="w-8 h-8 text-red-600" />
+                              <div>
+                                <p className="text-2xl font-bold text-red-700">{ward.overdue}</p>
+                                <p className="text-xs text-red-600">Overdue Cases</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Resolution Rate Bar */}
+                        <div className="mb-4">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm font-medium text-black">Resolution Rate</span>
+                            <span className={`text-sm font-bold ${
+                              resolutionRate >= 70 ? 'text-green-600' :
+                              resolutionRate >= 50 ? 'text-yellow-600' : 'text-red-600'
+                            }`}>
+                              {resolutionRate}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2.5 border border-gray-300">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                resolutionRate >= 70 ? 'bg-green-600' :
+                                resolutionRate >= 50 ? 'bg-yellow-600' : 'bg-red-600'
+                              }`}
+                              style={{ width: `${resolutionRate}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Avg Resolution Time */}
+                        {ward.avg_resolution_time && (
+                          <div className="p-3 bg-gradient-to-br from-[#FFF8F0] to-[#FFF5E8] rounded-lg border border-[#D4AF37]">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-gray-600">Avg Resolution Time</span>
+                              <span className="text-lg font-bold text-black">{ward.avg_resolution_time} days</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    {ward.overdue > 0 && (
-                      <div className="flex items-center gap-2 text-red-600 text-sm">
-                        <AlertTriangle className="w-4 h-4" />
-                        <span>{ward.overdue} Overdue</span>
-                      </div>
-                    )}
+                    </motion.div>
+                  );
+                }) : (
+                  <div className="col-span-2 text-center py-12 bg-white rounded-xl shadow-lg border-2 border-[#D4AF37]">
+                    <MapPin className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-black mb-2">No Ward Data Available</h3>
+                    <p className="text-gray-600">There are no ward performance metrics to display at this time.</p>
                   </div>
-                )) : (
-                  <p className="text-gray-500 text-center py-4">No ward data available</p>
                 )}
               </div>
             </motion.div>

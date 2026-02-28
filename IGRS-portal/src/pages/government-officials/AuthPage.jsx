@@ -374,6 +374,11 @@ const OfficialAuthPage = () => {
     try {
       if (isLogin) {
         // Login
+        console.log('🔐 Attempting login...');
+        console.log('API URL:', API_URL);
+        console.log('Full URL:', `${API_URL}/api/auth/login`);
+        console.log('Email:', formData.email);
+        
         const response = await fetch(`${API_URL}/api/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -383,9 +388,16 @@ const OfficialAuthPage = () => {
           })
         });
 
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
+        
         const data = await response.json();
+        console.log('Response data:', data);
 
         if (!response.ok) {
+          console.error('❌ Login failed - Response not OK');
+          console.error('Error data:', data);
+          
           // Handle specific error cases
           if (data.requiresEmailVerification) {
             // Prompt OTP when email is not verified yet
@@ -508,9 +520,17 @@ const OfficialAuthPage = () => {
         }
 
         // Store tokens and user data
+        console.log('✅ Login successful!');
+        console.log('Access Token:', data.accessToken ? 'Present' : 'MISSING');
+        console.log('Refresh Token:', data.refreshToken ? 'Present' : 'MISSING');
+        console.log('User:', data.user);
+        
         localStorage.setItem('accessToken', data.accessToken);
         localStorage.setItem('refreshToken', data.refreshToken);
         localStorage.setItem('user', JSON.stringify(data.user));
+        
+        console.log('✅ Tokens stored in localStorage');
+        console.log('localStorage accessToken:', localStorage.getItem('accessToken') ? 'Stored' : 'NOT STORED');
 
         // Success toast
         toast.success(`Welcome back, ${data.user.full_name}!`, {
@@ -537,8 +557,8 @@ const OfficialAuthPage = () => {
           } else {
             redirectUrl = data.user.id ? `/government/${data.user.id}` : '/officials-portal/authentication';
           }
-        } else if (data.user.role === 'government_official') {
-          // Government officials should go to government portal
+        } else if (data.user.role === 'city_commissioner' || data.user.role === 'ward_officer' || data.user.role === 'district_collector' || data.user.role === 'government_official') {
+          // Government officials (including city commissioners, ward officers, district collectors) go to government portal
           redirectUrl = data.user.id ? `/government/${data.user.id}` : '/officials-portal/authentication';
         } else if (data.user.role === 'citizen') {
           redirectUrl = '/citizen/dashboard';
@@ -710,8 +730,19 @@ const OfficialAuthPage = () => {
         }
       }
     } catch (error) {
-      console.error('Auth error:', error);
-      // Error toast already shown above
+      console.error('❌ Auth error:', error);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      
+      toast.error(error.message || 'An error occurred during authentication', {
+        duration: 5000,
+        position: 'top-center',
+        style: {
+          background: '#EF4444',
+          color: '#fff',
+          fontWeight: '600',
+        },
+      });
     } finally {
       setLoading(false);
     }

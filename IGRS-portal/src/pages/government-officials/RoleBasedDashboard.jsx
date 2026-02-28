@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import axios from 'axios';
+import api from '../../services/api';
 import WardOfficerDashboard from './WardOfficerDashboard';
 import CityCommissionerDashboard from './CityCommissionerDashboard';
 import DistrictCollectorDashboard from './DistrictCollectorDashboard';
@@ -17,18 +17,11 @@ const RoleBasedDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('accessToken'); // Changed from 'token' to 'accessToken'
+      const token = localStorage.getItem('accessToken');
       
       console.log('Fetching dashboard with token:', token ? 'Token exists' : 'No token');
       
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/dashboard/role-dashboard`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+      const response = await api.get('/dashboard/role-dashboard');
 
       console.log('Dashboard response:', response.data);
       

@@ -1,19 +1,18 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  ChevronRight, BarChart2, Users2, Clock, FileText, 
-  CheckCircle, AlertTriangle, TrendingUp, Award,
-  Bell, Activity, Zap,
-  Timer, ThumbsUp, UserCheck, BarChart3,
-  ClipboardList, Star, PieChart, Mail, Phone, Building
+  ChevronRight, BarChart2, Users2, Clock, 
+  CheckCircle, CheckCircle2, AlertTriangle, TrendingUp,
+  Activity, MapPin, BarChart3,
+  ClipboardList, Star, PieChart, Building
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import departmentDashboardService from '../../services/departmentDashboard.service';
+import api from '../../services/api';
 
 const DashboardPremium = ({ userAuth }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [liveStats, setLiveStats] = useState(null);
+  const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState(null);
 
@@ -26,53 +25,30 @@ const DashboardPremium = ({ userAuth }) => {
   };
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchData = async () => {
       try {
-        const token = localStorage.getItem('accessToken');
-        const userId = userAuth?.id;
+        setLoading(true);
         
-        if (userId && token) {
-          const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/users/${userId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            setProfileData(data.user);
-          }
-        }
+        // Fetch role-based dashboard data
+        const response = await api.get('/dashboard/role-dashboard');
+        setDashboardData(response.data);
+        
+        setLoading(false);
       } catch (error) {
-        console.error('Failed to fetch profile:', error);
+        console.error('Failed to fetch dashboard data:', error);
+        setLoading(false);
       }
     };
 
-    fetchProfile();
-
-    const departmentId = userAuth?.department_id;
-    const token = localStorage.getItem('accessToken');
-    if (!departmentId || !token) {
-      setLoading(false);
-      return;
-    }
-    
-    setLoading(true);
-    departmentDashboardService.getStats(departmentId, token)
-      .then((stats) => {
-        setLiveStats(stats);
-        setLoading(false);
-      })
-      .catch(() => {
-        setLiveStats(null);
-        setLoading(false);
-      });
-  }, [userAuth?.department_id, userAuth?.id]);
+    fetchData();
+  }, [userAuth?.id]);
 
   const features = [
     {
       title: "Real-time Monitoring",
       description: "Track grievances and their resolution status in real-time",
       icon: Clock,
-      path: "grievances",
+      path: "heatmap",
       image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=300&fit=crop"
     },
     {
@@ -112,12 +88,30 @@ const DashboardPremium = ({ userAuth }) => {
     },
   ];
 
-  const totalGrievances = liveStats?.total || 0;
-  const pendingGrievances = liveStats?.pending || 0;
-  const resolvedGrievances = liveStats?.resolved || 0;
-  const criticalGrievances = liveStats?.overdue || 0;
-  const inProgressGrievances = liveStats?.in_progress || 0;
-  const resolutionRate = totalGrievances > 0 ? Math.round((resolvedGrievances / totalGrievances) * 100) : 0;
+  // Get data from API
+  const apiKpis = dashboardData?.dashboard?.kpis;
+  const wardPerformance = dashboardData?.dashboard?.wardPerformance || [];
+  const departmentPerformance = dashboardData?.dashboard?.departmentPerformance || [];
+  const highPriorityIssues = dashboardData?.dashboard?.highPriorityIssues || [];
+  
+  const kpis = [
+    { label: 'Active Complaints', value: apiKpis?.active_complaints || '0', icon: AlertTriangle, color: 'black', trend: '+5%' },
+    { label: 'Resolved This Month', value: apiKpis?.resolved_this_month || '0', icon: CheckCircle, color: 'golden', trend: '+12%' },
+    { label: 'Overdue', value: apiKpis?.overdue || '0', icon: Clock, color: 'cream', trend: '-3%' },
+    { label: 'Avg Resolution Time', value: `${apiKpis?.avg_resolution_time || '0'} days`, icon: Activity, color: 'white', trend: '-8%' },
+    { label: 'Critical Issues', value: apiKpis?.critical_issues || '0', icon: TrendingUp, color: 'black', trend: '+2%' }
+  ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#FFF8F0] via-white to-[#FFF5E8] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#D4AF37] mx-auto mb-4"></div>
+          <p className="text-gray-600 font-semibold">Loading Dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FFF8F0] via-white to-[#FFF5E8]">
@@ -134,26 +128,20 @@ const DashboardPremium = ({ userAuth }) => {
             </div>
             <div className="flex-1">
               <h1 className="text-3xl font-bold text-black mb-2">
-                Welcome back, {profileData?.full_name || userAuth?.full_name || 'Officer'}
+                Welcome back, {dashboardData?.user?.name || userAuth?.full_name || 'Officer'}
               </h1>
               <p className="text-gray-600 text-lg mb-3">Government Officer Portal</p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                {profileData?.email && (
-                  <div className="flex items-center gap-2 text-gray-700">
-                    <Mail className="w-4 h-4 text-[#D4AF37]" />
-                    <span>{profileData.email}</span>
-                  </div>
-                )}
-                {profileData?.phone && (
-                  <div className="flex items-center gap-2 text-gray-700">
-                    <Phone className="w-4 h-4 text-[#D4AF37]" />
-                    <span>{profileData.phone}</span>
-                  </div>
-                )}
-                {(profileData?.department_name || userAuth?.department_name) && (
+                {dashboardData?.user?.designation && (
                   <div className="flex items-center gap-2 text-gray-700">
                     <Building className="w-4 h-4 text-[#D4AF37]" />
-                    <span>{profileData?.department_name || userAuth?.department_name}</span>
+                    <span>{dashboardData.user.designation}</span>
+                  </div>
+                )}
+                {dashboardData?.user?.department && (
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <Building className="w-4 h-4 text-[#D4AF37]" />
+                    <span>{dashboardData.user.department}</span>
                   </div>
                 )}
               </div>
@@ -161,144 +149,252 @@ const DashboardPremium = ({ userAuth }) => {
           </div>
         </motion.div>
 
-        {/* Stats Cards - Only Golden/Cream/Black/White */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-white rounded-2xl p-6 shadow-lg border-2 border-black hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-14 h-14 bg-black rounded-xl flex items-center justify-center shadow-md">
-                <FileText className="w-7 h-7 text-[#D4AF37]" />
-              </div>
-              <span className="text-xs font-bold text-black bg-[#FFF8F0] px-3 py-1.5 rounded-full border-2 border-[#D4AF37]">
-                TOTAL
-              </span>
-            </div>
-            <h3 className="text-sm font-semibold text-gray-600 mb-1">Total Grievances</h3>
-            <p className="text-4xl font-bold text-black mb-2">{totalGrievances}</p>
-            <div className="flex items-center gap-2 text-sm">
-              <TrendingUp className="w-4 h-4 text-[#D4AF37]" />
-              <span className="text-gray-700 font-semibold">Active this month</span>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-gradient-to-br from-[#FFF8F0] to-[#FFF5E8] rounded-2xl p-6 shadow-lg border-2 border-[#D4AF37] hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-[#D4AF37] to-[#C5A028] rounded-xl flex items-center justify-center shadow-md">
-                <Clock className="w-7 h-7 text-white" />
-              </div>
-              <span className="text-xs font-bold text-[#C5A028] bg-white px-3 py-1.5 rounded-full border-2 border-[#D4AF37]">
-                PENDING
-              </span>
-            </div>
-            <h3 className="text-sm font-semibold text-gray-600 mb-1">Pending Cases</h3>
-            <p className="text-4xl font-bold text-black mb-2">{pendingGrievances}</p>
-            <div className="flex items-center gap-2 text-sm">
-              <Activity className="w-4 h-4 text-[#D4AF37]" />
-              <span className="text-gray-700 font-semibold">{inProgressGrievances} in progress</span>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white rounded-2xl p-6 shadow-lg border-2 border-black hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-14 h-14 bg-black rounded-xl flex items-center justify-center shadow-md">
-                <CheckCircle className="w-7 h-7 text-[#D4AF37]" />
-              </div>
-              <span className="text-xs font-bold text-black bg-[#FFF8F0] px-3 py-1.5 rounded-full border-2 border-[#D4AF37]">
-                RESOLVED
-              </span>
-            </div>
-            <h3 className="text-sm font-semibold text-gray-600 mb-1">Resolved Cases</h3>
-            <p className="text-4xl font-bold text-black mb-2">{resolvedGrievances}</p>
-            <div className="flex items-center gap-2 text-sm">
-              <Award className="w-4 h-4 text-[#D4AF37]" />
-              <span className="text-gray-700 font-semibold">{resolutionRate}% completion</span>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="bg-gradient-to-br from-[#FFF8F0] to-[#FFF5E8] rounded-2xl p-6 shadow-lg border-2 border-black hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-14 h-14 bg-black rounded-xl flex items-center justify-center shadow-md">
-                <AlertTriangle className="w-7 h-7 text-[#D4AF37]" />
-              </div>
-              <span className="text-xs font-bold text-black bg-white px-3 py-1.5 rounded-full border-2 border-black">
-                CRITICAL
-              </span>
-            </div>
-            <h3 className="text-sm font-semibold text-gray-600 mb-1">Critical Cases</h3>
-            <p className="text-4xl font-bold text-black mb-2">{criticalGrievances}</p>
-            <div className="flex items-center gap-2 text-sm">
-              <Zap className="w-4 h-4 text-black" />
-              <span className="text-gray-700 font-semibold">Immediate action</span>
-            </div>
-          </motion.div>
+        {/* City-Wide KPIs */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          {kpis.map((kpi, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className={`rounded-2xl p-6 shadow-lg border-2 hover:shadow-2xl transition-all duration-300 ${
+                kpi.color === 'black' ? 'bg-black text-white border-black' :
+                kpi.color === 'golden' ? 'bg-gradient-to-br from-[#D4AF37] to-[#C5A028] text-white border-[#D4AF37]' :
+                kpi.color === 'cream' ? 'bg-gradient-to-br from-[#FFF8F0] to-[#FFF5E8] text-black border-[#D4AF37]' :
+                'bg-white text-black border-black'
+              }`}
+            >
+              <kpi.icon className={`w-8 h-8 mb-3 ${
+                kpi.color === 'black' || kpi.color === 'golden' ? 'text-white' : 'text-[#D4AF37]'
+              }`} />
+              <p className={`text-3xl font-bold mb-1 ${
+                kpi.color === 'black' || kpi.color === 'golden' ? 'text-white' : 'text-black'
+              }`}>
+                {kpi.value}
+              </p>
+              <p className={`text-sm mb-2 ${
+                kpi.color === 'black' || kpi.color === 'golden' ? 'text-gray-300' : 'text-gray-600'
+              }`}>
+                {kpi.label}
+              </p>
+              <p className={`text-xs font-bold ${
+                kpi.trend.startsWith('+') ? 'text-green-400' : 'text-red-400'
+              }`}>
+                {kpi.trend} vs last month
+              </p>
+            </motion.div>
+          ))}
         </div>
 
-        {/* Today's Activity */}
+        {/* Ward Performance */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
+          className="mb-8"
+        >
+          <h3 className="text-2xl font-bold text-black mb-6 flex items-center gap-2">
+            <MapPin className="w-6 h-6 text-[#D4AF37]" />
+            Ward Performance
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {wardPerformance.length > 0 ? wardPerformance.map((ward, index) => {
+              const resolutionRate = ward.total_grievances > 0 
+                ? Math.round((ward.resolved / ward.total_grievances) * 100) 
+                : 0;
+              
+              const getPerformanceBadge = () => {
+                if (ward.total_grievances === 0) return { label: 'No Data', color: 'bg-gray-100 text-gray-700' };
+                if (resolutionRate >= 70) return { label: 'Excellent', color: 'bg-green-100 text-green-700' };
+                if (resolutionRate >= 50) return { label: 'Good', color: 'bg-yellow-100 text-yellow-700' };
+                return { label: 'Needs Attention', color: 'bg-red-100 text-red-700' };
+              };
+              
+              const performanceBadge = getPerformanceBadge();
+              
+              return (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 + index * 0.05 }}
+                  className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border-2 border-[#D4AF37] hover:-translate-y-1"
+                >
+                  <div className="bg-gradient-to-r from-black to-gray-900 p-6 text-white">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-[#D4AF37] rounded-lg">
+                          <MapPin className="w-6 h-6 text-black" />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-bold">{ward.ward_name || `Ward ${ward.ward_number}`}</h3>
+                          <p className="text-gray-300 text-sm">Ward #{ward.ward_number || 'N/A'}</p>
+                        </div>
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${performanceBadge.color}`}>
+                        {performanceBadge.label}
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-4xl font-bold">{ward.total_grievances}</span>
+                      <span className="text-gray-300">Total Grievances</span>
+                    </div>
+                  </div>
+
+                  <div className="p-6 bg-gradient-to-br from-[#FFF8F0] to-white">
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                      <div className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-[#D4AF37] shadow-sm">
+                        <CheckCircle2 className="w-8 h-8 text-green-600" />
+                        <div>
+                          <p className="text-2xl font-bold text-black">{ward.resolved}</p>
+                          <p className="text-xs text-gray-600">Resolved</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-[#D4AF37] shadow-sm">
+                        <Clock className="w-8 h-8 text-yellow-600" />
+                        <div>
+                          <p className="text-2xl font-bold text-black">{ward.total_grievances - ward.resolved}</p>
+                          <p className="text-xs text-gray-600">Pending</p>
+                        </div>
+                      </div>
+
+                      {ward.overdue > 0 && (
+                        <div className="col-span-2 flex items-center gap-3 p-3 bg-red-50 rounded-lg border-2 border-red-300 shadow-sm">
+                          <AlertTriangle className="w-8 h-8 text-red-600" />
+                          <div>
+                            <p className="text-2xl font-bold text-red-700">{ward.overdue}</p>
+                            <p className="text-xs text-red-600">Overdue Cases</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mb-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium text-black">Resolution Rate</span>
+                        <span className={`text-sm font-bold ${
+                          resolutionRate >= 70 ? 'text-green-600' :
+                          resolutionRate >= 50 ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {resolutionRate}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5 border border-gray-300">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            resolutionRate >= 70 ? 'bg-green-600' :
+                            resolutionRate >= 50 ? 'bg-yellow-600' : 'bg-red-600'
+                          }`}
+                          style={{ width: `${resolutionRate}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {ward.avg_resolution_time && (
+                      <div className="p-3 bg-gradient-to-br from-[#FFF8F0] to-[#FFF5E8] rounded-lg border border-[#D4AF37]">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Avg Resolution Time</span>
+                          <span className="text-lg font-bold text-black">{ward.avg_resolution_time} days</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            }) : (
+              <div className="col-span-3 text-center py-12 bg-white rounded-xl shadow-lg border-2 border-[#D4AF37]">
+                <MapPin className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-black mb-2">No Ward Data Available</h3>
+                <p className="text-gray-600">There are no ward performance metrics to display at this time.</p>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Department Performance */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+          className="bg-white rounded-2xl p-6 shadow-lg border-2 border-black mb-8"
+        >
+          <h3 className="text-2xl font-bold text-black mb-6 flex items-center gap-2">
+            <BarChart3 className="w-6 h-6 text-[#D4AF37]" />
+            Department Performance
+          </h3>
+          <div className="space-y-4">
+            {departmentPerformance.length > 0 ? departmentPerformance.map((dept, index) => (
+              <div key={index} className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-bold text-black">{dept.department}</h4>
+                  <span className="px-3 py-1 bg-[#D4AF37] text-white rounded-full text-sm font-bold">
+                    Score: {dept.performance_score || 'N/A'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-600">Total</p>
+                    <p className="font-bold text-black">{dept.total_grievances}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600">Resolved</p>
+                    <p className="font-bold text-green-600">{dept.resolved}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600">Avg Time</p>
+                    <p className="font-bold text-blue-600">{dept.avg_resolution_time || 'N/A'} days</p>
+                  </div>
+                </div>
+              </div>
+            )) : (
+              <p className="text-gray-500 text-center py-4">No department data available</p>
+            )}
+          </div>
+        </motion.div>
+
+        {/* High Priority Issues */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
           className="bg-white rounded-2xl p-6 shadow-lg border-2 border-[#D4AF37] mb-8"
         >
-          <h3 className="text-2xl font-bold text-black mb-6">Today's Activity</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="flex items-center gap-4 p-5 bg-gradient-to-br from-black to-gray-900 rounded-xl shadow-md">
-              <div className="w-14 h-14 bg-[#D4AF37] rounded-xl flex items-center justify-center shadow-md">
-                <FileText className="w-7 h-7 text-black" />
+          <h3 className="text-2xl font-bold text-black mb-6 flex items-center gap-2">
+            <AlertTriangle className="w-6 h-6 text-red-600" />
+            High Priority Issues
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {highPriorityIssues.length > 0 ? highPriorityIssues.map((issue, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.9 + index * 0.05 }}
+                className="p-4 bg-gradient-to-br from-[#FFF8F0] to-[#FFF5E8] rounded-lg border-2 border-[#D4AF37] hover:shadow-lg transition-all duration-300"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <span className="font-bold text-sm text-black">{issue.grievance_id}</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                    issue.priority === 'critical' ? 'bg-red-600 text-white' : 'bg-orange-500 text-white'
+                  }`}>
+                    {issue.priority?.toUpperCase()}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-700 mb-3 line-clamp-2">{issue.title}</p>
+                <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <MapPin className="w-3 h-3 text-[#D4AF37]" />
+                  <span>{issue.ward_name || issue.location}</span>
+                </div>
+              </motion.div>
+            )) : (
+              <div className="col-span-3 text-center py-8">
+                <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-500 font-medium">No high priority issues at this time</p>
               </div>
-              <div>
-                <p className="text-3xl font-bold text-white">12</p>
-                <p className="text-sm text-gray-300">New cases registered</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 p-5 bg-gradient-to-br from-[#D4AF37] to-[#C5A028] rounded-xl shadow-md">
-              <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center shadow-md">
-                <Bell className="w-7 h-7 text-[#D4AF37]" />
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-white">5</p>
-                <p className="text-sm text-white/90">Cases need attention</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 p-5 bg-gradient-to-br from-[#FFF8F0] to-[#FFF5E8] rounded-xl border-2 border-[#D4AF37] shadow-md">
-              <div className="w-14 h-14 bg-black rounded-xl flex items-center justify-center shadow-md">
-                <CheckCircle className="w-7 h-7 text-[#D4AF37]" />
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-black">8</p>
-                <p className="text-sm text-gray-700">Cases resolved</p>
-              </div>
-            </div>
+            )}
           </div>
-
-          <button 
-            onClick={() => navigate(`${getBasePath()}/grievances`)}
-            className="mt-6 w-full py-4 bg-gradient-to-r from-black to-gray-900 text-white rounded-xl font-bold hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 border-2 border-[#D4AF37]"
-          >
-            View All Activity
-            <ChevronRight className="w-5 h-5" />
-          </button>
         </motion.div>
 
         {/* Features with Images */}
@@ -338,60 +434,7 @@ const DashboardPremium = ({ userAuth }) => {
           </div>
         </div>
 
-        {/* Performance Metrics */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.2 }}
-          className="bg-gradient-to-br from-black to-gray-900 rounded-2xl p-8 shadow-lg border-2 border-[#D4AF37] mb-8"
-        >
-          <h2 className="text-3xl font-bold text-white mb-6">Performance Metrics</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-[#D4AF37]/30">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-[#D4AF37] rounded-lg flex items-center justify-center">
-                  <Timer className="w-6 h-6 text-black" />
-                </div>
-                <span className="text-[#D4AF37] text-sm font-bold">↓ 12%</span>
-              </div>
-              <p className="text-sm text-gray-300 mb-1">Avg. Resolution Time</p>
-              <p className="text-3xl font-bold text-white">2.5 days</p>
-            </div>
 
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-[#D4AF37]/30">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-[#D4AF37] rounded-lg flex items-center justify-center">
-                  <ThumbsUp className="w-6 h-6 text-black" />
-                </div>
-                <span className="text-[#D4AF37] text-sm font-bold">↑ 8%</span>
-              </div>
-              <p className="text-sm text-gray-300 mb-1">Citizen Satisfaction</p>
-              <p className="text-3xl font-bold text-white">4.8/5</p>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-[#D4AF37]/30">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-[#D4AF37] rounded-lg flex items-center justify-center">
-                  <UserCheck className="w-6 h-6 text-black" />
-                </div>
-                <span className="text-[#D4AF37] text-sm font-bold">↑ 3%</span>
-              </div>
-              <p className="text-sm text-gray-300 mb-1">Response Rate</p>
-              <p className="text-3xl font-bold text-white">98.5%</p>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-[#D4AF37]/30">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-[#D4AF37] rounded-lg flex items-center justify-center">
-                  <BarChart3 className="w-6 h-6 text-black" />
-                </div>
-                <span className="text-gray-400 text-sm font-bold">—</span>
-              </div>
-              <p className="text-sm text-gray-300 mb-1">Cases This Week</p>
-              <p className="text-3xl font-bold text-white">47</p>
-            </div>
-          </div>
-        </motion.div>
       </main>
     </div>
   );

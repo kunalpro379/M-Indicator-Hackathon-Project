@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
-import { ArrowRight, Menu, X } from "lucide-react";
+import { ArrowRight, Menu, X, LogOut } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const FloatingNavbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -13,6 +17,31 @@ const FloatingNavbar = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
+  const handleOfficialPortal = () => {
+    if (user && user.role !== 'citizen') {
+      // Already logged in as official, go to dashboard
+      navigate(`/government/${user.id}/dashboard`);
+    } else {
+      // Not logged in or is citizen, go to auth page
+      navigate('/officials-portal/authentication');
+    }
+  };
+
+  const handleCitizenPortal = () => {
+    if (user && user.role === 'citizen') {
+      // Already logged in as citizen, go to dashboard
+      navigate(`/citizen/${user.id}/dashboard`);
+    } else {
+      // Not logged in or is official, go to auth page
+      navigate('/citizen-portal/authentication');
+    }
+  };
 
   return (
     <nav
@@ -48,23 +77,42 @@ const FloatingNavbar = () => {
 
           {/* Desktop Buttons */}
           <div className="hidden md:flex items-center space-x-3">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="text-sm font-bold border-2 border-black text-black hover:bg-black hover:text-white" 
-              onClick={() => window.location.href = '/citizen-portal/authentication'}
-            >
-              Citizen Portal
-              <ArrowRight className="h-4 w-4 ml-1" />
-            </Button>
-            <Button 
-              size="sm" 
-              className="bg-black hover:bg-gray-800 text-white font-bold text-sm" 
-              onClick={() => window.location.href = '/officials-portal/authentication'}
-            >
-              Officials Portal
-              <ArrowRight className="h-4 w-4 ml-1" />
-            </Button>
+            {user ? (
+              <>
+                <div className="text-sm font-semibold text-gray-700 mr-2">
+                  Welcome, {user.full_name || user.username}
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-sm font-bold border-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white" 
+                  onClick={handleLogout}
+                >
+                  <LogOut className="h-4 w-4 mr-1" />
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-sm font-bold border-2 border-black text-black hover:bg-black hover:text-white" 
+                  onClick={handleCitizenPortal}
+                >
+                  Citizen Portal
+                  <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
+                <Button 
+                  size="sm" 
+                  className="bg-black hover:bg-gray-800 text-white font-bold text-sm" 
+                  onClick={handleOfficialPortal}
+                >
+                  Officials Portal
+                  <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -90,23 +138,42 @@ const FloatingNavbar = () => {
                 About
               </a>
               <div className="flex flex-col space-y-2 pt-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-center text-sm font-bold border-2 border-black text-black hover:bg-black hover:text-white" 
-                  onClick={() => window.location.href = '/citizen-portal/authentication'}
-                >
-                  Citizen Portal
-                  <ArrowRight className="h-4 w-4 ml-1" />
-                </Button>
-                <Button 
-                  size="sm" 
-                  className="w-full justify-center bg-black hover:bg-gray-800 text-white font-bold text-sm" 
-                  onClick={() => window.location.href = '/officials-portal/authentication'}
-                >
-                  Officials Portal
-                  <ArrowRight className="h-4 w-4 ml-1" />
-                </Button>
+                {user ? (
+                  <>
+                    <div className="text-sm font-semibold text-gray-700 px-2 py-1">
+                      Welcome, {user.full_name || user.username}
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full justify-center text-sm font-bold border-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white" 
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="h-4 w-4 mr-1" />
+                      Logout
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full justify-center text-sm font-bold border-2 border-black text-black hover:bg-black hover:text-white" 
+                      onClick={handleCitizenPortal}
+                    >
+                      Citizen Portal
+                      <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      className="w-full justify-center bg-black hover:bg-gray-800 text-white font-bold text-sm" 
+                      onClick={handleOfficialPortal}
+                    >
+                      Officials Portal
+                      <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>

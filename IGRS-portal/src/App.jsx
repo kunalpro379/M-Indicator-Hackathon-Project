@@ -33,6 +33,7 @@ import MunicipalCommissionerDashboard from "./pages/government-officials/Municip
 import DistrictCollectorDashboard from "./pages/government-officials/DistrictCollectorDashboard";
 import RoleBasedDashboard from "./pages/government-officials/RoleBasedDashboard";
 import GrievanceMap from "./components/GrievanceMap";
+import WardGrievances from "./pages/government-officials/WardGrievances";
 
 // Admin Portal Pages
 import KnowledgeBaseManagement from "./pages/admin/KnowledgeBaseManagement";
@@ -150,6 +151,7 @@ function App() {
             <Route path="dashboard" element={<OfficerDashboard userAuth={user} />} />
             <Route path="role-dashboard" element={<RoleBasedDashboard />} />
             <Route path="grievances" element={<GrievanceList />} />
+            <Route path="ward-grievances" element={<WardGrievances />} />
             <Route path="map" element={<GrievanceMap />} />
             <Route path="heatmap" element={<AreaHeatmap />} />
             <Route path="chat" element={<Chat />} />
