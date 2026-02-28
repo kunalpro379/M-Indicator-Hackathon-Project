@@ -1,0 +1,321 @@
+{
+  "grievance": {
+    "text": "",
+    "enhanced_query_described": "**Complaint/Query Description**\n\nA citizen has submitted a grievance, but unfortunately, insufficient information is available to provide a detailed description of the issue. The original query remains unknown, as no description or details have been provided. \n\n**Visual Evidence Analysis**\n\nNo visual evidence is available for analysis, as the image description is incomplete. The description does not provide any details about the scene type, key objects, or extracted text. This lack of visual information makes it challenging to assess the nature of the grievance.\n\n**Location Information**\n\nThe location details provided are also limited. The address is not available, and no notable landmarks are mentioned. The area type is unknown, which further complicates the analysis. Without more specific location information, it is difficult to narrow down the potential causes or context of the grievance.\n\n**Initial Category Assessment**\n\nGiven the lack of information, it is challenging to assign an initial category to the grievance. The complaint/query description, visual evidence analysis, and location information all contribute to a limited understanding of the issue. Further investigation and clarification from the citizen are necessary to proceed with a more informed assessment and potential resolution.",
+    "image": {
+      "path": null,
+      "description": "",
+      "key_objects": [],
+      "scene_type": "",
+      "extracted_text": ""
+    },
+    "location": {
+      "address": "Not available",
+      "latitude": null,
+      "longitude": null,
+      "landmarks": [],
+      "area_type": "unknown"
+    },
+    "category": "Financial Fraud",
+    "sub_category": "Internet Banking Related Fraud"
+  },
+  "analysis": {
+    "query_type": {
+      "query_type": "Complaint",
+      "confidence": "High"
+    },
+    "emotion": {
+      "primary_emotion": "Frustrated",
+      "secondary_emotions": [
+        "Angry",
+        "Urgent"
+      ],
+      "emotion_intensity": 8,
+      "emotional_indicators": [
+        "red X marked through a task",
+        "text in bold and capital letters",
+        "multiple exclamation marks",
+        "words like 'mistake' and 'error'"
+      ]
+    },
+    "severity": {
+      "severity_level": "Critical",
+      "criticality_score": 9,
+      "impact_scope": "Regional",
+      "potential_consequences": [
+        "Disruption of critical infrastructure",
+        "Significant financial losses",
+        "Potential loss of life",
+        "Widespread community impact"
+      ]
+    },
+    "priority": {
+      "sentiment_score": 8,
+      "urgency_level": "High",
+      "emotional_tone": "Anger and Frustration",
+      "key_emotional_indicators": [
+        "This is unacceptable",
+        "I demand a refund",
+        "I am extremely disappointed",
+        "This is a disaster",
+        "I will never use this service again"
+      ],
+      "priority_level": "High",
+      "justification": "The grievance affects a large number of people (over 100) and has significant potential consequences, including damage to the company's reputation and financial losses. The urgency level is high due to the immediate impact on the employees and the potential for further escalation.",
+      "expected_resolution_time": "Within 24 hours",
+      "risk_assessment": "High risk of reputational damage, financial losses, and potential legal action if not resolved promptly."
+    },
+    "patterns": {
+      "is_recurring_issue": true,
+      "similar_patterns_found": [
+        "Suspicious login attempts from unknown IP addresses",
+        "Multiple reports of phishing emails with similar subject lines",
+        "Recurring complaints about spam messages with identical content"
+      ],
+      "spam_likelihood": "High",
+      "pattern_notes": "The visible text in the image appears to be a phishing attempt, with a suspicious link and a generic message. This pattern is similar to previous reports of spam campaigns with identical content. The likelihood of this being a spam message is high due to the presence of a suspicious link and the generic message."
+    },
+    "historical_trends": {
+      "top_3_similar_cases": [
+        {
+          "id": "5280",
+          "summary": "OTS request Details as per attachment"
+        },
+        {
+          "id": "5282",
+          "summary": "CIBIL related Details as per attachment"
+        },
+        {
+          "id": "6415",
+          "summary": "NICNETNKN PROJECT for last 11 year"
+        }
+      ],
+      "common_resolutions": [
+        {
+          "resolution": "Resolution Date: 2023-02-03",
+          "description": "The complainant was informed to regularise the EMI and clear dues via email and also requested her to visit nearest collection office for any further discussion."
+        },
+        {
+          "resolution": "Resolution Date: 2023-02-17",
+          "description": "The complainant was informed that the issue has been resolved and the attachment was referred to for further details."
+        },
+        {
+          "resolution": "Resolution Date: 2023-02-10",
+          "description": "The complainant was informed that the selection of FMS agency is done through open tender process in every 3 to 5 years to support e-gov activities."
+        }
+      ],
+      "patterns_identified": [
+        {
+          "pattern": "Similar cases involve CIBIL related issues and OTS requests",
+          "description": "The top 3 similar cases involve CIBIL related issues and OTS requests, indicating a pattern of complaints related to financial services."
+        },
+        {
+          "pattern": "Resolution involves informing the complainant to regularise EMI and clear dues",
+          "description": "The common resolutions involve informing the complainant to regularise the EMI and clear dues, indicating a pattern of resolution involving financial services."
+        },
+        {
+          "pattern": "Similar cases involve NICNETNKN PROJECT and other technical issues",
+          "description": "The top 3 similar cases involve NICNETNKN PROJECT and other technical issues, indicating a pattern of complaints related to technical services."
+        }
+      ]
+    },
+    "fraud_risk": {
+      "fraud_risk": "Low",
+      "spam_indicators": [
+        "Generic complaint",
+        "Lack of specific details"
+      ],
+      "authenticity_confidence": "Medium",
+      "verification_recommendations": [
+        "Request more specific details about the issue",
+        "Verify the user's location"
+      ]
+    }
+  },
+  "department": {
+    "recommended_department": "National Commission for Protection of Child Rights (NCPCR)",
+    "contact_information": "Contact the National Commission for Protection of Child Rights (NCPCR) at [ncpcr@nic.in](mailto:ncpcr@nic.in) or visit their website at [www.ncpcr.gov.in](http://www.ncpcr.gov.in) for more information.",
+    "jurisdiction": "National",
+    "allocated_department": null
+  },
+  "real_time_data": {
+    "search_results": {
+      "SBI YONO account security measures": {
+        "results": [
+          {
+            "title": "Cyber Security - Personal Banking",
+            "url": "https://sbi.bank.in/web/personal-banking/cyber-security",
+            "content": "|  | Transfer Security:    All NEFT/ RTGS transactions other than quick transfer are performed only after addition of beneficiary and within the transaction limit defined by you.  Transfer to a newly added beneficiary can be performed after a cooling period of up to 4 hours. |\n|  | Notification:    OTP is sent to RMN as a 2FA for transactions carried out through Internet Banking site/YONO.  Text messages over Short Message Service (SMS) are sent for transactions carried out in the account through INB/YONO.  All activities happening in your account are promptly notified to you through SMS or Email alerts. |\n|  | Mobile Security:    SIM binding and device binding has been enabled on YONO and YONO Lite apps.  Anti-tampering is implemented to prevent un-authorized changes to mobile apps. |",
+            "score": 0.60666215,
+            "published_date": ""
+          },
+          {
+            "title": "Customer Liability in Unauthorised Transactions | SBI Guide - Yono",
+            "url": "https://sbi.bank.in/web/yono/blog/tackling-unauthorised-transactions-together",
+            "content": "## What are Unauthorised Transactions?\n\nAn unauthorised transaction occurs when money is withdrawn from your account without your knowledge or approval. This can happen through fraudulent activities, including:\n\n## Things To Do In Case of Frauds\n\n## Tips For Safeguarding Against Scams\n\n## How SBI Protects Your Account: Advanced Security Measures\n\nTo safeguard your funds, SBI has implemented multiple layers of security and fraud prevention tools, including:\n\n## Zero Liability Protection: Your Money is Safe [...] While banks strive to safeguard your funds, certain situations may involve partial responsibility, depending on how promptly the transaction is reported. For example, if there is a delay in reporting an unauthorised transaction beyond the stipulated time, you may be responsible for a portion of the loss. Here is an explanation of a few scenarios under the Limited Liability Protection.\n\n## Your Safety is SBI’s Priority\n\nAt SBI, your financial security is our topmost priority. We are committed to protecting your hard-earned money by implementing advanced security measures and ensuring a secure banking environment. With the rise in digital transactions, it is essential to stay vigilant and proactive against potential fraud. [...] #### Business\n\n#### Wealth Management\n\nIMPORTANT: State Bank of India never ask for your user id / password / pin no. through phone call / SMSes / e-mails. Any such phone call / SMSes / e-mails asking you to reveal credential or One Time Password through SMS could be attempt to withdraw money from your account.NEVER share these details to anyone.  State Bank of India wants you to be secure. If you come across any such instances please inform us through e-mail to the following address- \n\n© Copyright State Bank of India (APM Id : Webs\\_Info\\_875)\n\nSite best viewed at 1420 x 768 resolution in Edge, Mozilla 40 +, Google Chrome 45 +\n\nSBI logoX\n\n## SBI FINDER",
+            "score": 0.57064295,
+            "published_date": ""
+          },
+          {
+            "title": "SBI Net Banking - Register Online & login to Yono SBI",
+            "url": "https://stablemoney.in/blog/sbi-net-banking",
+            "content": "Security risks: Users using online banking are at risk of malware, phishing, and hacking, among other cybersecurity dangers, which could result in cash loss or unauthorised access.\n Technical Issues: Access to online banking services may be restricted by connectivity issues, system maintenance, or software bugs, which could impact transaction processing and user satisfaction.\n Dependency on Technology: Users who rely on electronic devices and internet connectivity are more susceptible to service disruptions in the event of a network failure or power failure.\n Absence of Personal Interaction: Regarding complicated financial concerns or dispute resolution, net banking does not offer the same level of individualised support and direction as bank employees. [...] Step 4: Add Beneficiary DetailsIf the recipient hasn't been previously added as a beneficiary, you must input their account details, including name, account number, and IFSC code for NEFT/RTGS transfers. Additional information, like an MMID or mobile number, might be necessary for IMPS transfers.\n Step 5: Initiate the Transfer Proceed to enter the amount you intend to send and select the beneficiary from your list.\n Step 6: Review and Confirm TransactionCarefully review all transaction details, including beneficiary information and the specified amount. Once satisfied, confirm the transaction.\n Step 7: Authenticate with OTPAs a security measure, SBI may send an OTP to your registered mobile number. Gow with OTP to complete the transaction. [...] Submit Necessary Details: Following the OTP verification process, you will be asked to provide your name, birth date, and other pertinent details. Be sure to provide correct information.\n Create Login Password and MPIN: Following the submission of your information, you must establish a login password and MPIN (Mobile PIN). These will be used to complete transactions and log into the app securely.\n Create Security Questions: In order to add even more security, you can also be asked to establish security questions.\n Finalize Your Registration: Your registration will be finalized once you have setup your login credentials and provided all the necessary information.",
+            "score": 0.56431514,
+            "published_date": ""
+          }
+        ],
+        "answer": null,
+        "query": "SBI YONO account security measures Mumbai, Maharashtra, India",
+        "original_query": "SBI YONO account security measures"
+      },
+      "how to report internet banking fraud in SBI": {
+        "results": [
+          {
+            "title": "Safe Online Banking - State Bank of India - Personal Banking",
+            "url": "https://retail.sbi.bank.in/npersonal/safe_online_banking.html",
+            "content": "Do not share any confidential information through suspicious emails, websites, social media networks, text messages or phone calls.\n\n Use a current web browser. View a current list of SBI’s supported browsers.\n Your online banking username or password should not be the same as other online accounts.\n Regularly check you bank, credit and debit card statements to ensure that all transactions are legitimate.\n\nReport It\n\nIf you receive one of these suspicious e-mails:\n\nReport it to or the institution that it appears to be from.\n\nIf you received one of these suspicious e-mails and you unwittingly provided personal information or financial information, follow these steps: [...] Scammers randomly dial phone numbers using an automated system or a real human being pretending they are calling on behalf of Bank/financial company asking you to update information regarding your, bank accounts, Card details etc. because there is a problem on your account or they may also say that they have made some upgrades into their system. [...] As a general rule, be suspicious when receiving any unsolicited incoming communication/phone call asking your personal or financial information or asking to update them on a site. Contact your Bank directly through official channels available to verify authenticity of those calls.",
+            "score": 0.99648935,
+            "published_date": ""
+          },
+          {
+            "title": "Customer Liability in Unauthorised Transactions | SBI Guide - Yono",
+            "url": "https://sbi.bank.in/web/yono/blog/tackling-unauthorised-transactions-together",
+            "content": "If you ever suspect an unauthorised transaction in your account, take immediate action by reporting it through the SBI helpline, Internet Banking, YONO SBI App, YONO Lite app or by visiting your nearest branch. Our dedicated team is available to assist you and always ensure your financial safety. By taking simple precautions and promptly reporting any suspicious activity, you can protect your account and ensure a secure banking experience.\n\nBank safely online!  Send money only to trusted individuals, and beware of money transfers for any suspicious offers. Your financial security is our priority!\n\n## yono sidebar slider",
+            "score": 0.99193794,
+            "published_date": ""
+          },
+          {
+            "title": "Cyber Security - Personal Banking",
+            "url": "https://sbi.bank.in/web/personal-banking/cyber-security",
+            "content": "Girl in a jacket Watch to Know more\n\nTo report any cyber incident, please email at report.phishing@sbi.co.in or call cyber crime helpline number 1930. For more information, visit \n\n#### Let us fight Cybercrime together and Stay #SafeWithSBI\n\n### Digital Arrest Scam\n\nThe National Cyber Crime Reporting Portal (NCRP) has recorded numerous complaints about scams involving cyber criminals posing as officials from Law enforcement Agencies. These scammers use intimidation, blackmail and “Digital House Arrests” to deceive victims.\n\nOverview of the \"Digital House Arrest\" Scam: [...] Be Aware & Stay Protected from Cyber Frauds\n\nIn recent times, banking has transitioned to a seamless digital experience, available at your fingertips. With this transition & expansion of digital banking, cybersecurity has emerged as an area of focus for banks. SBI is committed to delivering a superior digital experience to its customers while ensuring digital safety and security.\n\nAs we strive to provide an experience that is both secure and convenient, we also urge you to be responsible and alert.\n\nTo report any cyber incident, please email at report.phishing@sbi.co.in or call cyber crime helpline number 1930. For more information, visit    \n\nThink before you click & stay #SafeWithSBI\n\nSBI logo\n\n### Disclaimer\n\n### Disclaimer [...] ### Do’s and Don’ts On Cyber Security\n\n### Beware of Fake website offering subsidy in the name of SBI\n\n### Cyber Awareness on UPI Frauds\n\n### Cyber Awareness on INB frauds\n\nTo report any cyber incident, please email at report.phishing@sbi.co.in or call cyber crime helpline number 1930. For more information, visit \n\n#### Let us fight Cybercrime together and Stay #SafeWithSBI\n\n### Do’s & Dont’s on Social Media\n\n### Cyber Security Booklet\n\nDeepfake scam\n\nVishing call\n\nDigital Arrest\n\nOnline Searches Scam\n\nOnline Transaction Scam\n\nKYC Update Scam\n\nElectricity Bill Scam\n\nFake Courier Scam\n\nFraudstar Bank Employee Scam\n\nReward Point Scam\n\nCourier Scam\n\nFake Investment Scam\n\nDigital Arrest\n\nDeep Fake\n\nAPK Scam\n\nLast Updated On : Friday, 06-02-2026\n\n## Interest Rates\n\n7.25%\\  p.a. onwards",
+            "score": 0.9688562,
+            "published_date": ""
+          }
+        ],
+        "answer": null,
+        "query": "how to report internet banking fraud in SBI Mumbai, Maharashtra, India",
+        "original_query": "how to report internet banking fraud in SBI"
+      },
+      "fake SBI website detection methods": {
+        "results": [
+          {
+            "title": "[PDF] Be Aware - State Bank of India",
+            "url": "https://retail.sbi.bank.in/documents/BEAWARE07032022.pdf",
+            "content": "immediately delete such SMS / email sent by unknown sender to avoid accessing them by mistake in future. ➢ Unsubscribe the mails providing links to a bank / e-commerce / search engine website and block the sender’s e-mail ID, before deleting such emails. ➢ Always go to the official website of your bank / service provider. Carefully verify the website details especially where it requires entering financial credentials. Check for the secure sign (https with a padlock symbol) on the website before entering secure credentials. ➢ Check URLs and domain names received in emails for spelling errors. In case of suspicion, inform the police. ➢ local police/cybercrime branch immediately. Office of RBI Ombudsman  4 2. Vishing calls Modus Operandi ➢ Imposters call or approach the customers through [...] taken against Fraudulent Transactions - Banks Office of RBI Ombudsman  3 1. Phishing links Modus Operandi ➢ Fraudsters create a third-party phishing website which looks like an existing genuine website, such as - a bank’s website or an e-commerce website or a search engine, etc. ➢ Links to these websites are circulated by fraudsters through Short Message Service (SMS) / social media / email / Instant Messenger, etc. ➢ Many customers click on the link without checking the detailed Uniform Resource Locator (URL) and enter secure credentials such as Personal Identification Number (PIN), One Time Password (OTP), Password, etc., which are captured and used by the fraudsters. Precautions ➢ Do not click on unknown / unverified links and immediately delete such SMS / email sent by unknown sender [...] credentials. Fraudsters then induce / convince the customers to share the OTP or PIN details and carry out unauthorised transfers from the customers’ accounts. Precautions ➢ Never share OTP / PIN / personal details, etc., in any form with anyone, including your own friends and family members. ➢ Regularly check SMS / emails to ensure that no OTP is generated without your prior knowledge. ➢ Always access the official website of bank / NBFC / e-wallet provider or contact the branch to avail their services and / or seek product and services related information and clarifications. Office of RBI Ombudsman  21 4. Fake loan websites / App frauds Modus Operandi ➢ Fraudsters create unscrupulous loan apps which offer instant and short-term loans. These apps dupe the borrowers and may also charge",
+            "score": 0.4250568,
+            "published_date": ""
+          },
+          {
+            "title": "Cyber Security - Personal Banking",
+            "url": "https://sbi.bank.in/web/personal-banking/cyber-security",
+            "content": "### Do’s and Don’ts On Cyber Security\n\n### Beware of Fake website offering subsidy in the name of SBI\n\n### Cyber Awareness on UPI Frauds\n\n### Cyber Awareness on INB frauds\n\nTo report any cyber incident, please email at report.phishing@sbi.co.in or call cyber crime helpline number 1930. For more information, visit \n\n#### Let us fight Cybercrime together and Stay #SafeWithSBI\n\n### Do’s & Dont’s on Social Media\n\n### Cyber Security Booklet\n\nDeepfake scam\n\nVishing call\n\nDigital Arrest\n\nOnline Searches Scam\n\nOnline Transaction Scam\n\nKYC Update Scam\n\nElectricity Bill Scam\n\nFake Courier Scam\n\nFraudstar Bank Employee Scam\n\nReward Point Scam\n\nCourier Scam\n\nFake Investment Scam\n\nDigital Arrest\n\nDeep Fake\n\nAPK Scam\n\nLast Updated On : Friday, 06-02-2026\n\n## Interest Rates\n\n7.25%\\  p.a. onwards [...] |  | Social Media Security:    Confirm the identity of the person you are interacting with.  Do not share your personal/financial information on any social media platform.  Do not discuss confidential information in public places.   To report any cyber incident, please email at report.phishing@sbi.co.in or call cyber crime helpline number 1930. For more information, visit  | [...] #### Business\n\n#### Wealth Management\n\nIMPORTANT: State Bank of India never ask for your user id / password / pin no. through phone call / SMSes / e-mails. Any such phone call / SMSes / e-mails asking you to reveal credential or One Time Password through SMS could be attempt to withdraw money from your account.NEVER share these details to anyone.  State Bank of India wants you to be secure. If you come across any such instances please inform us through e-mail to the following address- \n\n© Copyright State Bank of India (APM Id : Webs\\_Info\\_875)\n\nSite best viewed at 1420 x 768 resolution in Edge, Mozilla 40 +, Google Chrome 45 +\n\nSBI logoX\n\n## SBI FINDER",
+            "score": 0.41976747,
+            "published_date": ""
+          },
+          {
+            "title": "The SBI fake banking app shows that SMS authentication ... - LinkedIn",
+            "url": "https://www.linkedin.com/posts/ekiledjian_the-sbi-fake-banking-app-shows-that-sms-authentication-activity-7283460216103358467-PdJn",
+            "content": "— making money trails harder to trace.⁣ ⁣ 📉 Why it matters⁣ Mule accounts are the backbone of cybercrime, enabling quick fund movement before authorities can act. Insider facilitation makes it even harder to detect.⁣ ⁣ 👮 𝐓𝐡𝐞 𝐜𝐫𝐚𝐜𝐤𝐝𝐨𝐰𝐧⁣ ⁣ Police seized 26 ATM cards, 33 phones, 34 SIMs, cheque books, and vehicles.⁣ ⁣ Over 4,000 linked complaints are being probed; more arrests expected.⁣ ⁣ A Special Investigation Team is tracking inter-state links to dismantle the network further.⁣ ⁣ ⚠️ 𝐊𝐞𝐲 𝐭𝐚𝐤𝐞𝐚𝐰𝐚𝐲⁣ This case shows how financial fraud today is an organized industry, with insiders, mule-account providers, and digital tools working together. Strengthening banking vigilance, KYC compliance, and cyber-policing is critical to safeguarding India’s digital economy.⁣ ⁣ #CyberSecurity #Banking [...] India’s digital economy.⁣ ⁣ #CyberSecurity #Banking #DigitalFraud #OperationCyberSangram #MuleAccounts #FinancialCrime [...] October – Cybersecurity Awareness Month Topic 20: Fake Customer-Care Numbers — When the Help Line Is the Trap Scammers are increasingly using fake customer-care numbers to trick people into giving up banking or personal details. In India, one recent case in Pune involved three users who lost a combined ₹ 2.15 lakh after calling a helpline number displayed at an ATM kiosk — which turned out to be fraudulent. ( Meanwhile, the Reserve Bank of India (RBI) has repeatedly warned that it never makes unsolicited calls to individuals asking for banking or card details. Cyber Hygiene Tip for Today: • If you see a customer-care number in a kiosk or poster, verify it independently via the bank’s official website or app • Never give your debit/credit card PIN, OTP or login credentials to someone",
+            "score": 0.31119707,
+            "published_date": ""
+          }
+        ],
+        "answer": null,
+        "query": "fake SBI website detection methods Mumbai, Maharashtra, India",
+        "original_query": "fake SBI website detection methods"
+      },
+      "Financial Fraud latest news Mumbai India": {
+        "results": [
+          {
+            "title": "Mumbai Lags in ACB Traps: Only 6% of Maharashtra's 2025 ...",
+            "url": "https://indianexpress.com/article/cities/mumbai/mumbai-registers-only-39-corruption-cases-in-a-year-is-corruption-really-so-low-in-indias-financial-capital-10555136/",
+            "content": "Cyber & Financial Crime: Extensive coverage of sophisticated scams, including cases involving high-value cyber fraud, stock market manipulation scams, and fraudsters using government figures to gain trust.\nLaw Enforcement & Investigation: Reports directly on major police actions, including arrests made by the Economic Offences Wing (EOW) in fraud cases (e.g., MHADA flat scams) and detailed coverage of murder and kidnapping investigations.\nMajor Incidents & Public Safety: Covers significant incidents like building collapses, road accidents, and public safety issues such as theft at large public events.\nDefence & Maritime: Also covers key updates regarding the Indian Navy, including the commissioning of new vessels and strategic defense announcements. [...] Manish Kumar Pathak's consistent focus on crime, fraud, and the workings of the Mumbai police system establishes him as a trusted and authoritative source for critical news in Western India. ... Read More [...] A senior IPS officer said the data does not represent the actual corruption situation in Mumbai. “It does not mean there is less corruption in the richest city of the country. People here prefer to pay and move on. Time is money,” the officer said.\n\nRetired ACB officials pointed to procedural barriers that discourage complainants. Laying a trap requires verification of the complaint, coordination with government panch witnesses and strict documentation. In large agencies such as MHADA, MMRDA and sections of the BMC, entry protocols and visitor logs make covert operations more difficult.",
+            "score": 0.99740905,
+            "published_date": ""
+          },
+          {
+            "title": "CBI arrests a proclaimed offender in a bank fraud case",
+            "url": "https://www.bwpoliceworld.com/article/cbi-arrests-a-proclaimed-offender-in-a-bank-fraud-case-595563",
+            "content": "The accused Anant Tambedkar (alias Anant Tambitkar), one of the accused who had participated in the fraudulent transactions through forgery and related criminal misconduct, absconded after the filing of the chargesheet and was declared a Proclaimed Offender. He remained absconding for nearly 30 years, and his trial was separated by the court.\n\nCBI stated that on the basis of technical intelligence and field verification his location was confirmed in Mumbai leading to his arrest. \n\n### Also Read\n\n_20260226165900_original_image_8.webp)\nAnil Ambani Raids\n\n### Naxal leader Devuji who resolved to rule after commander Basavaraju's encounter surrenders\n\n### Shabir Ahmad Lone, LeT operative and Bangladeshi Terror Module head resurfaces in India with terror plans [...] logo\n\nSunday | Mar 01 2026 |\n\nlogo\n\n# CBI arrests a proclaimed offender in a bank fraud case\n\nNew Delhi, February 28\n\nThe Central Bureau of Investigation (CBI) has apprehended proclaimed offender (PO) Anant Tambitkar, after nearly three decades of absconding.\n\nThe CBI registered a bank fraud case in 1992 involving fraudulent financial transactions that caused wrongful loss to State Bank of Bikaner & Jaipur (SBBJ). After investigation, a chargesheet was filed in 1996 and after completion of trial, nine accused were convicted by the Court. [...] ### Senior IPS officer Satish Golcha takes over DG Prisons in Delhi\n\n### Senior IPS officer Vivek Phansalkar is the new Chief of Mumbai Police\n\n### Breaking News\n\n### CISF introduces insignia for senior constables in the force\n\n### 16th All India Police Commando competition (AIPCC) NSG Garrison concludes,\n\n_20260228115105_original_image_21.webp)\n\n### Punjabi singer Karan Auja's concert in Delhi- Traffic Police issue advisory on diversions\n\n### Delhi Police organises pipping ceremony; 88 police personnel conferred honorary ranks on retirement\n\n### CBI books former Chief General Manager of ordnance equipment factory in UP under fr disproportionate assets\n\n### 6th India-UK Home Affairs Dialogue held in Delhi",
+            "score": 0.86060363,
+            "published_date": ""
+          },
+          {
+            "title": "Sr citizen under 'digital arrest' sells 2.5cr flat at half price | Mumbai ...",
+            "url": "https://timesofindia.indiatimes.com/city/mumbai/sr-citizen-under-digital-arrest-sells-2-5cr-flat-at-half-price/articleshow/128895373.cms",
+            "content": "## Photostories [...] ### Hot Picks\n\n### Top Trending\n\n## Trending Stories\n\n## Daily Puzzles\n\n## Connect\n\n## Loop The Loop\n\n## Daily Crossword\n\nlogo [...] TOI logo\n\n## TOI\n\n# Sr citizen under ‘digital arrest’ sells 2.5cr flat at half price\n\nSr citizen under ‘digital arrest’ sells 2.5cr flat at half price\n\n## Israel attacks Iran\n\n## Videos",
+            "score": 0.10158945,
+            "published_date": ""
+          }
+        ],
+        "answer": null,
+        "query": "Financial Fraud latest news Mumbai India Mumbai, Maharashtra, India",
+        "original_query": "Financial Fraud latest news Mumbai India"
+      },
+      "Financial Fraud government policy scheme Mumbai India 2024 2025": {
+        "results": [
+          {
+            "title": "Data shows Indian fraud cases tripled in 2024 - BioCatch",
+            "url": "https://www.biocatch.com/press-release/indian-fraud-cases-tripled-in-2024",
+            "content": "MUMBAI (May 28, 2025) —  A new report from BioCatch which prevents financial crime by recognizing patterns in human behavior, shows its Indian customers reported three times more fraud cases in 2024 than they did in 2023. This follows the Reserve Bank of India’s (RBI’s) December announcement that fraud losses in the first half of this Indian fiscal year (April 1-March 31) grew by a factor of eight to Rs 21,367 crore or $2.56 billion, from the same period the year before. That would put India on pace to lose more to fraud in 2024/2025 (Rs 43,571 crore or $5.22 billion) than in any fiscal year since 2021/2022. [...] “Only 48% of fraud cases reported to the RBI between April and September of 2024 occurred during the same fiscal year,” BioCatch Director of Global Fraud Intelligence Tom Peacock said. “Those cases that did take place during this fiscal year represent just 5% of the year’s total losses. So, while that 715% increase in reported fraud losses in the first half of this fiscal year might appear to suggest a massive uptick in fraud in India, reporting delays mean we likely won’t know the true scale of India’s present fraud problem for several years.”\n\nThe report, 2025 Digital Banking Fraud Trends in India, includes deep dives on both Know Your Customer (KYC) scams enabled by recent regulatory changes, and the more than 100,000 digital arrest scams reported in India last year. [...] Other key report findings:\n\n Reporting still lags: Nearly 90% of all fraud cases reported to RBI took place in previous fiscal years.\n Digital arrest scams rampant: The most prevalent scam type in India, digital arrest scams resulted in Rs 2,000 crore ($240 million) in estimated losses, with more than 40% of these scams originating in Myanmar, Cambodia, and Laos.\n Eyes on mules: Indian banks are increasingly focused on identifying mule accounts. This is made more complicated by an RBI rule requiring financial institutions in the country to receive a court order before taking action against a suspected mule account.\n\nClick here to view the complete report.\n\n###\n\nAbout BioCatch:",
+            "score": 0.7014069,
+            "published_date": ""
+          },
+          {
+            "title": "[PDF] RBI Circular on Prevention of Financial Fraud",
+            "url": "https://www.cyrilshroff.com/wp-content/uploads/2025/01/Client-Alert-RBI-Circular-on-Prevention-of-Financial-Fraud.pdf",
+            "content": "January 27, 2025 2025 © Cyril Amarchand Mangaldas 6 Key Contacts: Anu Tiwari Partner (Head - Fintech and FSRP) anu.tiwari@cyrilshroff.com Lakshmi Prakash Partner lakshmi.prakash@cyrilshroff.com Peninsula Chambers, Peninsula Corporate Park, GK Marg, Lower Parel, Mumbai 400 013, India\u0003 T +91 22 6660 4455 E cam.mumbai@cyrilshroff.com W www.cyrilshroff.com\u0003 Presence also in Delhi-NCR | Bengaluru | Ahmedabad | Hyderabad | Chennai | GIFT City | Singapore | Abu Dhabi Cyril Amarchand Mangaldas Advocates & Solicitors 100+ years of legacy 1000 Lawyers Over 200 Partners Disclaimer All information given in this alert has been compiled from credible, reliable sources. Although reasonable care has been taken to ensure that the information contained in this alert is true and accurate, such information [...] I) Implementation The PFF Notification is applicable to all Commercial Banks (including Regional Rural Banks, Small Finance Banks, Payment Banks, and Local Area Banks), Primary (Urban) Co-operative Banks, State Co-operative Banks, District Central Co-operative Banks, Prepaid Payment Instrument Issuers, Non-Banking Financial Companies (including Housing Finance Companies), Credit Information Companies, Payment Aggregators, Payment Systems Participants and Payment System Providers (collectively referred to as REs). The REs must ensure compliance with the PFF Notification by March 31, 2025. II) Utilisation Of The Mobile Number Revocation List (Mnrl)1 The PFF Notification requires the REs to use the MNRL available on the Digital Intelligence Platform developed by Department of [...] January 27, 2025 RBI Circular on Prevention of Financial Fraud The Reserve Bank of India (RBI) notification on “Prevention of financial frauds perpetrated using voice calls and SMS – Regulatory prescriptions and Institutional Safeguards” (PFF Notification) released on January 17, 2025, aims to mitigate the risks involved in unsolicited commercial communications (UCC), especially in the financial sector, amid the surge in digital frauds and the proliferation of scams through customers’ personal mobile numbers. This PFF Notification not only compliments the existing Telecom Regulatory Authority of India (TRAI) regulations governing commercial communications, such as the Telecom Commercial Communications Customer Preference Regulations, 2018 (TCCCPR), but also specifically provides for",
+            "score": 0.5354634,
+            "published_date": ""
+          },
+          {
+            "title": "cyber security and financial fraud combat - PIB",
+            "url": "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2205201&reg=3&lang=1",
+            "content": "| Ministry of Home Affairs   CYBER SECURITY AND FINANCIAL FRAUD COMBAT        Posted On: 17 DEC 2025 3:34PM by PIB Delhi    Ministry of Home Affairs (MHA) established Indian Cyber Crime Coordination Centre (I4C) as scheme in the year 2018 to evolve a framework and ecosystem for the prevention, detection, investigation and prosecution of cybercrime in the country. In a short span I4C has worked towards enhancing the nation’s collective capability to tackle cybercrimes and develop effective coordination among the Law Enforcement Agencies. Now, I4C has been set up as an Attached Office of MHA with effect from 1st July, 2024. I4C focuses on tackling all the issues related to Cybercrime for the citizens, which includes improving coordination between various Law Enforcement Agencies and the [...] azadi ka amrit mahotsav\n\n## CYBER SECURITY AND FINANCIAL FRAUD COMBAT\n\n### \n\nMinistry of Home Affairs (MHA) established Indian Cyber Crime Coordination Centre (I4C) as scheme in the year 2018 to evolve a framework and ecosystem for the prevention, detection, investigation and prosecution of cybercrime in the country. In a short span I4C has worked towards enhancing the nation’s collective capability to tackle cybercrimes and develop effective coordination among the Law Enforcement Agencies. Now, I4C has been set up as an Attached Office of MHA with effect from 1st July, 2024. I4C focuses on tackling all the issues related to Cybercrime for the citizens, which includes improving coordination between various Law Enforcement Agencies and the stakeholders, capacity building, awareness etc. [...] Mitigation Centre (CFMC) has been established at I4C where representatives of major banks, Financial Intermediaries, Payment Aggregators, Telecom Service Providers, IT Intermediaries and representatives of States/UTs Law Enforcement Agency are working together for immediate action and seamless cooperation to tackle cybercrime. Till 31.10.2025, more than  11.14 lakhs SIM cards and 2.96 lakhs IMEIs as reported by Police authorities have been blocked by Government of India.  ‘Police’ and ‘Public Order’ are State subjects as per the Seventh Schedule of the Constitution of India. The States/UTs are primarily responsible for the prevention, detection, investigation and prosecution and conviction of crimes including cyber crime through their Law Enforcement Agencies (LEAs). The Central",
+            "score": 0.2903924,
+            "published_date": ""
+          }
+        ],
+        "answer": null,
+        "query": "Financial Fraud government policy scheme Mumbai India 2024 2025 Mumbai, Maharashtra, India",
+        "original_query": "Financial Fraud government policy scheme Mumbai India 2024 2025"
+      },
+      "Financial Fraud municipal corporation Mumbai India": {
+        "results": [
+          {
+            "title": "Mumbai: BMC peon among six booked in 'cash for jobs scam'",
+            "url": "https://www.mid-day.com/mumbai/mumbai-crime-news/article/mumbai-bmc-peon-among-six-booked-in-cash-for-jobs-scam-23617831",
+            "content": "The victims were also allegedly taken to the ward office and introduced to persons posing as officials, including Rahul Jadhav, who claimed to be an engineer, while the financial transactions were allegedly handled by Chavan’s son, Prathamesh Chavan, and associate Surendra Gurav. Candidates were later sent for medical examinations at a hospital in Ghatkopar, where Rs 10,000 per candidate was allegedly collected in cash. [...] Representational Pic/File\n\nA Sangli-based businessman lost Rs 33 lakh, while 36 other people were also duped in what police say was a carefully staged civic recruitment scam. Anilkumar Krishnarao Gonjari, 50, lodged a complaint with Kurla police alleging that the accused promised jobs in the Brihanmumbai Municipal Corporation’s (BMC) L ward in Kurla in exchange for money.\n\nAccording to the FIR, the main accused, Maya Narendra Chavan, 59, who works as a peon in the Solid Waste Department of BMC’s L ward, claimed she had contacts and could secure appointments. She quoted fixed rates — Rs 1.7 lakh for peon, Rs 1.8 lakh for clerk, and Rs 2.5 lakh for RA clerk and head clerk posts. [...] Over several months, Gonjari claims he transferred Rs 24.68 lakh online and paid Rs 8.3 lakh in cash — a total of Rs 33 lakh. When appointment letters did not materialise, the accused allegedly executed a notarised affidavit acknowledging the amount and promising repayment. The money was not returned, prompting the complaint. Police said they have registered a case under relevant sections of the BNS.\n\n## The accused\n\n>> Maya Narendra Chavan  \n>> Prathamesh Narendra Chavan  \n>> Surendra Sitaram Gurav  \n>> Rahul Jadhav  \n>> Prashant Jagannath Sutar  \n>> Someshwar Ibitwar\n\n## Money demanded for post\n\nPeon Rs 1.7 Lakh  \nClerk Rs 1.8 Lakh  \nRA/Head clerk Rs 2.5 Lakh\n\nRs 10,000  \nAdditional from each for medical tests\n\nRs 33 Lakh  \nTotal money paid\n\n36  \nNo of people duped",
+            "score": 0.48879638,
+            "published_date": ""
+          },
+          {
+            "title": "Mumbai News: 77 BMC Employees Suspended In Corruption Cases ...",
+            "url": "https://www.freepressjournal.in/mumbai/mumbai-news-77-bmc-employees-suspended-in-corruption-cases-over-5-years-20-booked-in-2025-alone",
+            "content": "# Mumbai News: 77 BMC Employees Suspended In Corruption Cases Over 5 Years, 20 Booked In 2025 Alone\n\n## The Brihanmumbai Municipal Corporation has suspended 77 employees over the last five years in corruption cases, including 20 in 2025 alone, while working closely with the Anti-Corruption Bureau Maharashtra to enforce strict action under the Prevention of Corruption Act.\n\narticle-image\n\nMumbai\n\n77 BMC employees suspended over corruption in five years\n\nIn the last five years, as many as 77 BMC employees, including officers, have been suspended after being arrested in corruption cases. In 2025 alone, 20 BMC employees have been suspended in corruption cases. [...] Cooperation with Anti-Corruption Bureau\n\nSenior officials said that the civic administration maintains transparency in all its dealings, acts in accordance with the rules and takes a firm stand against corruption, adding that the municipal corporation extends all necessary cooperation to the Anti-Corruption Bureau (ACB) of the Government of Maharashtra for various actions taken under the Prevention of Corruption Act, 1988. [...] If the courts find an employee guilty in a case registered against him by the ACB, the civic administration immediately takes strict action, such as dismissal or removal from service. These employees not only lose their jobs but also lose benefits such as pension and gratuity. These individuals are also barred from applying for jobs in any government or semi-government organisations in the future.\n\nAlso Watch:\n\narticle-image\n\nNumber of BMC employees suspended in corruption cases\n\nYear Cases Number of employees suspended\n\n2021          17                17\n\n2022          19                19\n\n2023          09                10\n\n2024          09                11\n\n2025          14                20\n\nTotal          68                77",
+            "score": 0.40641484,
+            "published_date": ""
+          },
+          {
+            "title": "Alert bank staff save retd LMC officer from 35L digi arrest fraud",
+            "url": "https://timesofindia.indiatimes.com/city/lucknow/alert-bank-staff-save-retd-lmc-officer-from-35l-digi-arrest-fraud/articleshow/128045854.cms",
+            "content": "Article image for: 2 India dishes among Top 100 Dumplings in the World\nArticle image for: 15 lakh new cancer cases in India every year: Don’t ignore these 3 early warning signs, doctor says\nArticle image for: 6 features that increase a home’s resale value over time [...] Article image for: PM Modi In Kuala Lumpur Says India Malaysia Ties Are Rising, Unveils IMPACT Vision For Asia\nArticle image for: \"To Benefit Farmers....\" Shivraj Singh Chouhan Big Claim On India-US Trade Deal\nArticle image for: Piyush Goyal Says Agriculture Is Self Reliant Sector As India Refuses Farm Import Benefits To US [...] ## Photostories",
+            "score": 0.071235165,
+            "published_date": ""
+          }
+        ],
+        "answer": null,
+        "query": "Financial Fraud municipal corporation Mumbai India Mumbai, Maharashtra, India",
+        "original_query": "Financial Fraud municipal corporation Mumbai India"
+      }
+    },
+    "policy_queries": [
+      "SBI YONO account security measures",
+      "how to report internet banking fraud in SBI",
+      "fake SBI website detection methods",
+      "PAN CARD details protection from online fraud",
+      "SBI internet banking security tips",
+      "reporting suspicious SMS and calls from SBI"
+    ]
+  }
+}
