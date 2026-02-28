@@ -76,6 +76,11 @@ async function createWorkerContractorTables() {
       ON daily_reports(date DESC);
     `);
 
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_field_worker_states_user_date 
+      ON field_worker_states(user_id, date DESC);
+    `);
+
     // Update users table to support field_worker and contractor roles
     await client.query(`
       DO $$ 

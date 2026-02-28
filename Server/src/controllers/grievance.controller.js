@@ -272,18 +272,15 @@ export const getGrievanceById = async (req, res) => {
 
     const params = [grievanceId];
 
-    // Citizens can view any grievance if viewAll=true (from "all grievances" page)
-    if (userRole === 'citizen' && viewAll !== 'true') {
-      console.log('[getGrievanceById] Adding citizen filter');
-      query += ' AND g.citizen_id = $2';
-      params.push(userId);
-    } else if (userRole === 'department_officer') {
+    // Department officers can only view their assigned grievances
+    if (userRole === 'department_officer') {
       query += ' AND (g.assigned_officer_id = $2 OR g.department_id = $3)';
       params.push(userId, req.user.department_id);
     } else if (userRole === 'department_head') {
       query += ' AND g.department_id = $2';
       params.push(req.user.department_id);
     }
+    // Citizens and admins can view any grievance (no filter)
 
     const result = await pool.query(query, params);
 
@@ -334,7 +331,11 @@ export const getGrievanceById = async (req, res) => {
     res.json({
       grievance: result.rows[0],
       comments: commentsResult.rows,
-      timeline: fullTimeline.sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0))
+      timeline: fullTimeline.sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0)),
+      currentUser: {
+        id: userId,
+        role: userRole
+      }
     });
   } catch (error) {
     console.error('Get grievance error:', error);
@@ -427,18 +428,136 @@ export const addComment = async (req, res) => {
     const { grievanceId } = req.params;
     const { comment, is_internal = false } = req.body;
     const userId = req.user.id;
+    const userName = req.user.full_name || req.user.name || 'User';
 
-    const result = await pool.query(
-      `INSERT INTO grievancecomments (grievance_id, user_id, comment, is_internal)
-       VALUES ($1, $2, $3, $4)
-       RETURNING *`,
-      [grievanceId, userId, comment, is_internal]
+    // Verify grievance exists first
+    const grievanceCheck = await pool.query(
+      'SELECT id, comments FROM usergrievance WHERE id = $1',
+      [grievanceId]
     );
 
-    res.status(201).json({
-      message: 'Comment added successfully',
-      comment: result.rows[0]
-    });
+    if (grievanceCheck.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Grievance not found',
+        message: 'The grievance you are trying to comment on does not exist.'
+      });
+    }
+
+    // Check if user exists in users table
+    let userCheck = await pool.query(
+      'SELECT id, full_name, role FROM users WHERE id = $1',
+      [userId]
+    );
+
+    // If user doesn't exist, try to create from citizens table
+    if (userCheck.rows.length === 0) {
+      console.log(`[addComment] User ${userId} not found in users table, checking citizens...`);
+      
+      const citizenCheck = await pool.query(
+        'SELECT id, user_id, full_name, email, phone FROM citizens WHERE user_id = $1',
+        [userId]
+      );
+
+      if (citizenCheck.rows.length > 0) {
+        const citizen = citizenCheck.rows[0];
+        console.log(`[addComment] Creating user from citizen: ${citizen.full_name}`);
+        
+        await pool.query(
+          `INSERT INTO users (id, email, password_hash, full_name, phone, role, status, created_at)
+           VALUES ($1, $2, $3, $4, $5, 'citizen', 'active', NOW())
+           ON CONFLICT (id) DO NOTHING`,
+          [citizen.user_id, citizen.email, '$2b$10$created.from.citizen.for.comment', citizen.full_name, citizen.phone]
+        );
+
+        // Also ensure citizen record is linked
+        await pool.query(
+          `UPDATE citizens SET user_id = $1 WHERE id = $2`,
+          [citizen.user_id, citizen.id]
+        );
+
+        // Re-check user
+        userCheck = await pool.query(
+          'SELECT id, full_name, role FROM users WHERE id = $1',
+          [userId]
+        );
+      } else {
+        // Create placeholder user if not found anywhere
+        console.log(`[addComment] Creating placeholder user for ${userId}`);
+        
+        // Create user
+        await pool.query(
+          `INSERT INTO users (id, email, password_hash, full_name, role, status, created_at)
+           VALUES ($1, $2, $3, $4, 'citizen', 'active', NOW())
+           ON CONFLICT (id) DO NOTHING`,
+          [userId, `user_${userId.substring(0, 8)}@system.local`, '$2b$10$placeholder.hash.for.system.user', userName]
+        );
+
+        // Create corresponding citizen record
+        await pool.query(
+          `INSERT INTO citizens (user_id, full_name, email, phone, is_registered, is_active, created_at)
+           VALUES ($1, $2, $3, $4, true, true, NOW())
+           ON CONFLICT (user_id) DO NOTHING`,
+          [userId, userName, `user_${userId.substring(0, 8)}@system.local`, `+91-${userId.substring(0, 10)}`]
+        );
+
+        // Re-check user
+        userCheck = await pool.query(
+          'SELECT id, full_name, role FROM users WHERE id = $1',
+          [userId]
+        );
+      }
+    }
+
+    // Try to insert into grievancecomments table
+    try {
+      const result = await pool.query(
+        `INSERT INTO grievancecomments (grievance_id, user_id, comment, is_internal)
+         VALUES ($1, $2, $3, $4)
+         RETURNING *`,
+        [grievanceId, userId, comment, is_internal]
+      );
+
+      // Fetch user details to return with comment
+      const commentWithUser = await pool.query(
+        `SELECT c.id, c.comment, c.is_internal, c.created_at, 
+                u.full_name as user_name, u.role
+         FROM grievancecomments c
+         LEFT JOIN users u ON c.user_id = u.id
+         WHERE c.id = $1`,
+        [result.rows[0].id]
+      );
+
+      res.status(201).json({
+        message: 'Comment added successfully',
+        comment: commentWithUser.rows[0]
+      });
+    } catch (insertError) {
+      // Fallback: Add to JSONB comments field in usergrievance
+      console.log('[addComment] Falling back to JSONB comments field:', insertError.message);
+      
+      const existingComments = grievanceCheck.rows[0].comments || [];
+      const newComment = {
+        id: Date.now().toString(),
+        user_id: userId,
+        user_name: userCheck.rows[0]?.full_name || userName,
+        role: userCheck.rows[0]?.role || 'citizen',
+        comment: comment,
+        is_internal: is_internal,
+        created_at: new Date().toISOString()
+      };
+      
+      const updatedComments = [...existingComments, newComment];
+      
+      await pool.query(
+        'UPDATE usergrievance SET comments = $1 WHERE id = $2',
+        [JSON.stringify(updatedComments), grievanceId]
+      );
+
+      res.status(201).json({
+        message: 'Comment added successfully',
+        comment: newComment
+      });
+    }
   } catch (error) {
     console.error('Add comment error:', error);
     res.status(500).json({ error: 'Failed to add comment' });

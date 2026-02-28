@@ -5,7 +5,7 @@ import {
   LayoutDashboard, FileText, TrendingUp, Users, AlertTriangle, Activity,
   Clock, CheckCircle, Briefcase, MapPin, ChevronRight, Loader, DollarSign, BarChart3,
   Eye, Pencil, Search, X, MessageSquare, Wrench, BookOpen, ScrollText, UserPlus, AlertCircle as AlertCircleIcon, Link as LinkIcon,
-  Map as MapIcon, Maximize2, Minimize2, Calendar, Building2, Sparkles, ExternalLink, Image as ImageIcon
+  Map as MapIcon, Maximize2, Minimize2, Calendar, Building2, Sparkles, ExternalLink, Image as ImageIcon, Check, XCircle
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -68,6 +68,27 @@ const DepartmentDashboardNew = () => {
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [staff, setStaff] = useState([]);
   const [staffLoading, setStaffLoading] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [pendingRequestsLoading, setPendingRequestsLoading] = useState(false);
+  const [editingFieldWorker, setEditingFieldWorker] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    full_name: '',
+    phone: '',
+    specialization: '',
+    zone: '',
+    ward: '',
+    status: 'active'
+  });
+  const [addFormData, setAddFormData] = useState({
+    full_name: '',
+    phone: '',
+    email: '',
+    specialization: '',
+    zone: '',
+    ward: ''
+  });
   const [contractors, setContractors] = useState([]);
   const [contractorsLoading, setContractorsLoading] = useState(false);
   const [zoneAllocation, setZoneAllocation] = useState([]);
@@ -77,6 +98,8 @@ const DepartmentDashboardNew = () => {
   const [escalationsLoading, setEscalationsLoading] = useState(false);
   const [aiInsightsList, setAiInsightsList] = useState([]);
   const [aiInsightsLoading, setAiInsightsLoading] = useState(false);
+  const [progressReport, setProgressReport] = useState(null);
+  const [progressReportLoading, setProgressReportLoading] = useState(false);
   const [citizenFeedbackData, setCitizenFeedbackData] = useState({ data: [], summary: {} });
   const [citizenFeedbackLoading, setCitizenFeedbackLoading] = useState(false);
   const [predictiveMaintenanceList, setPredictiveMaintenanceList] = useState([]);
@@ -162,7 +185,10 @@ const DepartmentDashboardNew = () => {
     if (activeTab === 'map') loadMapGrievances();
   }, [activeTab, depId]);
   useEffect(() => {
-    if (activeTab === 'analytics') loadAnalytics();
+    if (activeTab === 'analytics') {
+      loadAnalytics();
+      loadProgressReport();
+    }
   }, [activeTab, depId]);
   useEffect(() => {
     if (activeTab === 'resources') loadResourcesData();
@@ -204,6 +230,30 @@ const DepartmentDashboardNew = () => {
       }
     } finally { setAnalyticsLoading(false); }
   };
+
+  const loadProgressReport = async () => {
+    try {
+      setProgressReportLoading(true);
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        await handleAuthError(new Error('No token'));
+        return;
+      }
+      const res = await departmentDashboardService.getProgressReport(token);
+      if (res.success) {
+        setProgressReport(res.data);
+      } else {
+        setProgressReport(null);
+      }
+    } catch (e) {
+      const handled = await handleAuthError(e);
+      if (!handled) {
+        console.error('Error loading progress report:', e);
+        setProgressReport(null);
+      }
+    } finally { setProgressReportLoading(false); }
+  };
+
   const loadResourcesData = async () => {
     const token = localStorage.getItem('accessToken');
     if (!token) {
@@ -213,8 +263,13 @@ const DepartmentDashboardNew = () => {
     try {
       if (activeResourceTab === 'internal-team') {
         setStaffLoading(true);
-        const res = await departmentDashboardService.getStaff(depId, token);
-        if (res.success) setStaff(res.data || []);
+        setPendingRequestsLoading(true);
+        const [staffRes, pendingRes] = await Promise.all([
+          departmentDashboardService.getStaff(depId, token),
+          departmentDashboardService.getPendingFieldWorkerRequests(token)
+        ]);
+        if (staffRes.success) setStaff(staffRes.data || []);
+        if (pendingRes.success) setPendingRequests(pendingRes.data || []);
       } else if (activeResourceTab === 'contractors') {
         setContractorsLoading(true);
         const res = await departmentDashboardService.getContractors(depId, token);
@@ -231,6 +286,7 @@ const DepartmentDashboardNew = () => {
       }
     } finally {
       setStaffLoading(false);
+      setPendingRequestsLoading(false);
       setContractorsLoading(false);
       setZoneAllocationLoading(false);
     }
@@ -324,6 +380,144 @@ const DepartmentDashboardNew = () => {
         setKnowledgeBaseList([]);
       }
     } finally { setKnowledgeBaseLoading(false); }
+  };
+
+  const handleApproveFieldWorker = async (requestId) => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      await handleAuthError(new Error('No token'));
+      return;
+    }
+    
+    if (!confirm('Are you sure you want to approve this field worker request?')) {
+      return;
+    }
+
+    try {
+      const res = await departmentDashboardService.approveFieldWorkerRequest(requestId, token);
+      if (res.success) {
+        alert('Field worker approved successfully!');
+        // Reload staff and pending requests
+        loadResourcesData();
+      }
+    } catch (e) {
+      const handled = await handleAuthError(e);
+      if (!handled) {
+        console.error('Error approving field worker:', e);
+        alert('Failed to approve field worker: ' + e.message);
+      }
+    }
+  };
+
+  const handleRejectFieldWorker = async (requestId) => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      await handleAuthError(new Error('No token'));
+      return;
+    }
+    
+    const reason = prompt('Please provide a reason for rejection:');
+    if (!reason) {
+      return;
+    }
+
+    try {
+      const res = await departmentDashboardService.rejectFieldWorkerRequest(requestId, reason, token);
+      if (res.success) {
+        alert('Request rejected successfully!');
+        // Reload pending requests
+        loadResourcesData();
+      }
+    } catch (e) {
+      const handled = await handleAuthError(e);
+      if (!handled) {
+        console.error('Error rejecting field worker:', e);
+        alert('Failed to reject request: ' + e.message);
+      }
+    }
+  };
+
+  const handleEditFieldWorker = (fieldWorker) => {
+    setEditingFieldWorker(fieldWorker);
+    setEditFormData({
+      full_name: fieldWorker.full_name || '',
+      phone: fieldWorker.phone || '',
+      specialization: fieldWorker.specialization || '',
+      zone: fieldWorker.zone || '',
+      ward: fieldWorker.ward || '',
+      status: fieldWorker.staff_status || 'active'
+    });
+    setShowEditModal(true);
+  };
+
+  const handleSaveFieldWorkerEdit = async () => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      await handleAuthError(new Error('No token'));
+      return;
+    }
+
+    try {
+      // TODO: Create API endpoint for updating field worker
+      // For now, just show alert
+      alert('Field worker update functionality will be implemented soon!');
+      setShowEditModal(false);
+      
+      // Reload staff data
+      loadResourcesData();
+    } catch (e) {
+      const handled = await handleAuthError(e);
+      if (!handled) {
+        console.error('Error updating field worker:', e);
+        alert('Failed to update field worker: ' + e.message);
+      }
+    }
+  };
+
+  const handleAddFieldWorker = async () => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      await handleAuthError(new Error('No token'));
+      return;
+    }
+
+    // Validate required fields
+    if (!addFormData.full_name || !addFormData.phone) {
+      alert('Please fill in all required fields (Name and Phone)');
+      return;
+    }
+
+    // Validate phone format
+    if (!addFormData.phone.match(/^\+?[1-9]\d{1,14}$/)) {
+      alert('Please enter a valid phone number (e.g., +919876543210)');
+      return;
+    }
+
+    try {
+      const res = await departmentDashboardService.addFieldWorker(addFormData, token);
+      
+      if (res.success) {
+        alert(`✅ Field worker added successfully!\n\nStaff ID: ${res.data.staffId}\nName: ${res.data.full_name}\nPhone: ${res.data.phone}`);
+        setShowAddModal(false);
+        setAddFormData({
+          full_name: '',
+          phone: '',
+          email: '',
+          specialization: '',
+          zone: '',
+          ward: ''
+        });
+        
+        // Reload staff data
+        loadResourcesData();
+      }
+    } catch (e) {
+      const handled = await handleAuthError(e);
+      if (!handled) {
+        console.error('Error adding field worker:', e);
+        alert('Failed to add field worker: ' + e.message);
+      }
+    }
   };
 
   const handleUploadDocument = async () => {
@@ -1775,6 +1969,143 @@ const DepartmentDashboardNew = () => {
             </tbody>
           </table>
         </div>
+
+        {/* AI-Generated Progress Report */}
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Sparkles className="w-6 h-6 text-white" />
+              <h3 className="text-xl font-bold text-white">AI-Powered Progress Analysis</h3>
+            </div>
+            {progressReport && (
+              <span className="text-xs text-blue-100">
+                Last updated: {new Date(progressReport.lastModified).toLocaleString()}
+              </span>
+            )}
+          </div>
+
+          {progressReportLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader className="w-8 h-8 animate-spin text-blue-600" />
+              <span className="ml-3 text-blue-700 font-medium">Loading AI analysis...</span>
+            </div>
+          ) : !progressReport ? (
+            <div className="p-8 text-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <BarChart3 className="w-8 h-8 text-blue-600" />
+              </div>
+              <p className="text-stone-700 font-medium mb-2">No analysis available yet</p>
+              <p className="text-sm text-stone-500">
+                AI-powered progress reports are generated every hour. Check back soon!
+              </p>
+            </div>
+          ) : (
+            <div className="p-6 space-y-6">
+              {/* Key Metrics Cards */}
+              {progressReport.parsed?.metrics && Object.keys(progressReport.parsed.metrics).length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  {progressReport.parsed.metrics.totalGrievances !== undefined && (
+                    <div className="bg-white rounded-lg p-4 border border-blue-200">
+                      <p className="text-xs text-stone-600 font-semibold mb-1">Total Grievances</p>
+                      <p className="text-2xl font-bold text-stone-900">{progressReport.parsed.metrics.totalGrievances}</p>
+                    </div>
+                  )}
+                  {progressReport.parsed.metrics.resolutionRate !== undefined && (
+                    <div className="bg-white rounded-lg p-4 border border-green-200">
+                      <p className="text-xs text-stone-600 font-semibold mb-1">Resolution Rate</p>
+                      <p className="text-2xl font-bold text-green-600">{progressReport.parsed.metrics.resolutionRate.toFixed(1)}%</p>
+                    </div>
+                  )}
+                  {progressReport.parsed.metrics.performanceScore !== undefined && (
+                    <div className="bg-white rounded-lg p-4 border border-blue-200">
+                      <p className="text-xs text-stone-600 font-semibold mb-1">Performance Score</p>
+                      <p className="text-2xl font-bold text-blue-600">{progressReport.parsed.metrics.performanceScore.toFixed(1)}/100</p>
+                    </div>
+                  )}
+                  {progressReport.parsed.metrics.officerUtilization !== undefined && (
+                    <div className="bg-white rounded-lg p-4 border border-amber-200">
+                      <p className="text-xs text-stone-600 font-semibold mb-1">Officer Utilization</p>
+                      <p className="text-2xl font-bold text-amber-600">{progressReport.parsed.metrics.officerUtilization.toFixed(1)}%</p>
+                    </div>
+                  )}
+                  {progressReport.parsed.metrics.budgetUtilization !== undefined && (
+                    <div className="bg-white rounded-lg p-4 border border-purple-200">
+                      <p className="text-xs text-stone-600 font-semibold mb-1">Budget Utilization</p>
+                      <p className="text-2xl font-bold text-purple-600">{progressReport.parsed.metrics.budgetUtilization.toFixed(1)}%</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* AI Report Sections */}
+              <div className="bg-white rounded-lg border border-blue-200 overflow-hidden">
+                <div className="max-h-[600px] overflow-y-auto">
+                  {progressReport.parsed?.sections && progressReport.parsed.sections.length > 0 ? (
+                    <div className="p-6 space-y-6">
+                      {progressReport.parsed.sections.map((section, index) => (
+                        <div key={index} className="border-b border-stone-200 last:border-0 pb-6 last:pb-0">
+                          {section.level === 1 && (
+                            <h2 className="text-2xl font-bold text-stone-900 mb-3">{section.text}</h2>
+                          )}
+                          {section.level === 2 && (
+                            <h3 className="text-xl font-bold text-stone-800 mb-3 flex items-center gap-2">
+                              <div className="w-1 h-6 bg-blue-600 rounded"></div>
+                              {section.text}
+                            </h3>
+                          )}
+                          {section.level === 3 && (
+                            <h4 className="text-lg font-semibold text-stone-700 mb-2">{section.text}</h4>
+                          )}
+                          {section.content && (
+                            <div className="prose prose-stone max-w-none">
+                              <div 
+                                className="text-stone-700 leading-relaxed whitespace-pre-wrap"
+                                dangerouslySetInnerHTML={{ 
+                                  __html: section.content
+                                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                                    .replace(/^- (.+)$/gm, '<li>$1</li>')
+                                    .replace(/(<li>.*<\/li>)/s, '<ul class="list-disc pl-5 space-y-1">$1</ul>')
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-6">
+                      <pre className="text-sm text-stone-700 whitespace-pre-wrap font-mono bg-stone-50 p-4 rounded-lg">
+                        {progressReport.content}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Download Button */}
+              <div className="flex justify-end">
+                <button
+                  onClick={() => {
+                    const blob = new Blob([progressReport.content], { type: 'text/markdown' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = progressReport.fileName || 'progress-report.md';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Download Full Report
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -1788,10 +2119,95 @@ const DepartmentDashboardNew = () => {
       </div>
       {activeResourceTab === 'internal-team' && (staffLoading ? <div className="flex items-center justify-center py-12"><Loader className="w-8 h-8 animate-spin text-stone-500" /></div> : (
         <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-md">
-          <h3 className="text-xl font-bold p-6 border-b border-stone-200 text-stone-900 uppercase tracking-wide">Internal Team - Small Work Specialists</h3>
-          <p className="px-6 py-3 text-sm text-stone-600 bg-stone-50 border-b border-stone-200">
-            Internal team members handle small-scale grievances and maintenance work that doesn't require contractor involvement.
-          </p>
+          <div className="flex items-center justify-between p-6 border-b border-stone-200">
+            <div>
+              <h3 className="text-xl font-bold text-stone-900 uppercase tracking-wide">Internal Team - Small Work Specialists</h3>
+              <p className="text-sm text-stone-600 mt-1">
+                Internal team members handle small-scale grievances and maintenance work that doesn't require contractor involvement.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              {pendingRequests.length > 0 && (
+                <div className="flex items-center gap-2 px-4 py-2 bg-amber-100 rounded-lg border border-amber-300">
+                  <AlertCircleIcon className="w-5 h-5 text-amber-600" />
+                  <span className="text-sm font-bold text-amber-900">
+                    {pendingRequests.length} Pending Request{pendingRequests.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              )}
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                <UserPlus className="w-4 h-4" />
+                Add Staff Member
+              </button>
+            </div>
+          </div>
+          
+          {/* Pending Requests Section */}
+          {pendingRequests.length > 0 && (
+            <div className="bg-amber-50 border-b-2 border-amber-200">
+              <div className="px-6 py-3 flex items-center gap-2">
+                <AlertCircleIcon className="w-5 h-5 text-amber-600" />
+                <h4 className="text-sm font-bold text-amber-900 uppercase">Pending Registration Requests ({pendingRequests.length})</h4>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-amber-100">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-amber-900">Name</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-amber-900">Phone</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-amber-900">Channel</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-amber-900">Requested</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-amber-900">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-amber-200">
+                    {pendingRequests.map((req) => (
+                      <tr key={req.id} className="hover:bg-amber-100 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="text-sm font-semibold text-stone-900">{req.full_name}</div>
+                          {req.specialization && <div className="text-xs text-stone-600">{req.specialization}</div>}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-stone-700">{req.phone}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
+                            req.channel === 'telegram' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                          }`}>
+                            {req.channel === 'telegram' ? 'Telegram' : 'WhatsApp'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-stone-600">
+                          {new Date(req.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleApproveFieldWorker(req.id)}
+                              className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleRejectFieldWorker(req.id)}
+                              className="flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg transition-colors"
+                            >
+                              <XCircle className="w-3.5 h-3.5" />
+                              Reject
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          
+          {/* Active Staff Section */}
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-stone-50">
@@ -1804,6 +2220,7 @@ const DepartmentDashboardNew = () => {
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-600">Workload</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-600">Specialization</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-600">Performance</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-600">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-200">
@@ -1835,6 +2252,15 @@ const DepartmentDashboardNew = () => {
                       <td className="px-4 py-3 text-sm text-stone-600">{s.specialization || '-'}</td>
                       <td className="px-4 py-3 text-sm text-stone-700">
                         {perfScore > 0 ? `${Number(perfScore).toFixed(0)}%` : '-'} {avgRes && <span className="text-xs text-stone-500">{avgRes}</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => handleEditFieldWorker(s)}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          Edit
+                        </button>
                       </td>
                     </tr>
                   );
@@ -3365,6 +3791,265 @@ const DepartmentDashboardNew = () => {
         {activeTab === 'officers' && renderOfficers()}
         {activeTab === 'audit-logs' && renderAuditLogs()}
       </div>
+
+      {/* Edit Field Worker Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-stone-900">Edit Field Worker</h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-stone-400 hover:text-stone-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Staff ID (Read-only) */}
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">
+                  Staff ID
+                </label>
+                <input
+                  type="text"
+                  value={editingFieldWorker?.staff_id || ''}
+                  disabled
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg bg-stone-50 text-stone-500"
+                />
+              </div>
+
+              {/* Full Name */}
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.full_name}
+                  onChange={(e) => setEditFormData({ ...editFormData, full_name: e.target.value })}
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter full name"
+                />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">
+                  Phone Number *
+                </label>
+                <input
+                  type="tel"
+                  value={editFormData.phone}
+                  onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="+91XXXXXXXXXX"
+                />
+              </div>
+
+              {/* Specialization */}
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">
+                  Specialization
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.specialization}
+                  onChange={(e) => setEditFormData({ ...editFormData, specialization: e.target.value })}
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., Plumbing, Electrical, Civil"
+                />
+              </div>
+
+              {/* Zone */}
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">
+                  Zone
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.zone}
+                  onChange={(e) => setEditFormData({ ...editFormData, zone: e.target.value })}
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., Zone A, North Zone"
+                />
+              </div>
+
+              {/* Ward */}
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">
+                  Ward
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.ward}
+                  onChange={(e) => setEditFormData({ ...editFormData, ward: e.target.value })}
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., Ward 1, Ward 2"
+                />
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">
+                  Status
+                </label>
+                <select
+                  value={editFormData.status}
+                  onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="on_leave">On Leave</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 bg-stone-50 border-t border-stone-200 px-6 py-4 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 text-stone-700 hover:bg-stone-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveFieldWorkerEdit}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Staff Member Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-stone-900">Add New Staff Member</h3>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-stone-400 hover:text-stone-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Full Name */}
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  value={addFormData.full_name}
+                  onChange={(e) => setAddFormData({ ...addFormData, full_name: e.target.value })}
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Enter full name"
+                  required
+                />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">
+                  Phone Number *
+                </label>
+                <input
+                  type="tel"
+                  value={addFormData.phone}
+                  onChange={(e) => setAddFormData({ ...addFormData, phone: e.target.value })}
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="+91XXXXXXXXXX"
+                  required
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">
+                  Email (Optional)
+                </label>
+                <input
+                  type="email"
+                  value={addFormData.email}
+                  onChange={(e) => setAddFormData({ ...addFormData, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="email@example.com"
+                />
+              </div>
+
+              {/* Specialization */}
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">
+                  Specialization
+                </label>
+                <input
+                  type="text"
+                  value={addFormData.specialization}
+                  onChange={(e) => setAddFormData({ ...addFormData, specialization: e.target.value })}
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="e.g., Plumbing, Electrical, Civil"
+                />
+              </div>
+
+              {/* Zone */}
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">
+                  Zone
+                </label>
+                <input
+                  type="text"
+                  value={addFormData.zone}
+                  onChange={(e) => setAddFormData({ ...addFormData, zone: e.target.value })}
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="e.g., Zone A, North Zone"
+                />
+              </div>
+
+              {/* Ward */}
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">
+                  Ward
+                </label>
+                <input
+                  type="text"
+                  value={addFormData.ward}
+                  onChange={(e) => setAddFormData({ ...addFormData, ward: e.target.value })}
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="e.g., Ward 1, Ward 2"
+                />
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> The staff member will be added directly to your department with an auto-generated Staff ID and default password. They can login using their phone number.
+                </p>
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 bg-stone-50 border-t border-stone-200 px-6 py-4 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="px-4 py-2 text-stone-700 hover:bg-stone-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddFieldWorker}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium"
+              >
+                Add Staff Member
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

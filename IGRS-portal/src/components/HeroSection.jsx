@@ -25,22 +25,24 @@ const HeroSection = () => {
     return () => observer.disconnect();
   }, []);
 
-  const handleCitizenClick = async () => {
+  const handleCitizenClick = () => {
     if (loading) return;
-    if (user) {
-      const profile = await getCurrentProfile();
-      navigate("/citizen-portal/dashboard");
+    if (user && user.role === 'citizen') {
+      // Already logged in as citizen, go to their dashboard
+      navigate(`/citizen/${user.id}/dashboard`);
     } else {
+      // Not logged in or is official, go to auth page
       navigate("/citizen-portal/authentication");
     }
   };
 
-  const handleOfficialClick = async () => {
+  const handleOfficialClick = () => {
     if (loading) return;
-    if (user) {
-      const profile = await getCurrentProfile();
-      navigate("/officials-portal/dashboard");
+    if (user && user.role !== 'citizen') {
+      // Already logged in as official, go to their dashboard
+      navigate(`/government/${user.id}/dashboard`);
     } else {
+      // Not logged in or is citizen, go to auth page
       navigate("/officials-portal/authentication");
     }
   };

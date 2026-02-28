@@ -331,6 +331,75 @@ class DepartmentDashboardService {
 
     return await response.json();
   }
+
+  async getPendingFieldWorkerRequests(token) {
+    const response = await fetch(`${API_URL}/api/field-worker-requests/pending`, {
+      headers: { 
+        'Authorization': `Bearer ${token}`, 
+        'Content-Type': 'application/json' 
+      }
+    });
+    if (!response.ok) throw new Error('Failed to fetch pending requests');
+    return await response.json();
+  }
+
+  async approveFieldWorkerRequest(requestId, token) {
+    const response = await fetch(`${API_URL}/api/field-worker-requests/approve/${requestId}`, {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`, 
+        'Content-Type': 'application/json' 
+      }
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || 'Failed to approve request');
+    }
+    return await response.json();
+  }
+
+  async rejectFieldWorkerRequest(requestId, reason, token) {
+    const response = await fetch(`${API_URL}/api/field-worker-requests/reject/${requestId}`, {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`, 
+        'Content-Type': 'application/json' 
+      },
+      body: JSON.stringify({ reason })
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || 'Failed to reject request');
+    }
+    return await response.json();
+  }
+
+  async addFieldWorker(fieldWorkerData, token) {
+    const response = await fetch(`${API_URL}/api/field-worker-requests/add`, {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`, 
+        'Content-Type': 'application/json' 
+      },
+      body: JSON.stringify(fieldWorkerData)
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || 'Failed to add field worker');
+    }
+    return await response.json();
+  }
+
+  async getProgressReport(token) {
+    const response = await fetch(`${API_URL}/api/progress-reports/latest`, {
+      headers: { 
+        'Authorization': `Bearer ${token}`, 
+        'Content-Type': 'application/json' 
+      }
+    });
+    if (!response.ok) throw new Error('Failed to fetch progress report');
+    return await response.json();
+  }
 }
 
 export default new DepartmentDashboardService();

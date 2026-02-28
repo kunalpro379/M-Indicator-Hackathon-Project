@@ -12,7 +12,7 @@ export default defineConfig({
   },
   server: {
     host: '127.0.0.1', // Use IPv4 instead of IPv6
-    port: 5010,
+    port: 5173,
     hmr: {
       overlay: true,
     },

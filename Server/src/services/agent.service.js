@@ -5,7 +5,9 @@ import * as helpers from './agent.helpers.js';
 
 class AgentService {
   constructor() {
-    // DeepSeek API configuration
+    // AI configuration - supports both Gemini and DeepSeek
+    this.aiProvider = process.env.AI_PROVIDER || 'gemini';
+    this.geminiApiKey = process.env.GEMINI_API_KEY;
     this.deepseekApiKey = process.env.DEEPSEEK_API_KEY;
     this.deepseekBaseUrl = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1';
     
@@ -25,10 +27,12 @@ class AgentService {
   saveContractorState = (userId, state) => helpers.saveContractorState(userId, state);
   uploadProofToBlob = (userId, media) => helpers.uploadProofToBlob(userId, media);
   uploadDocumentToBlob = (userId, media) => helpers.uploadDocumentToBlob(userId, media);
-  storeDailyReport = (userId, report, proofs, score) => helpers.storeDailyReport(userId, report, proofs, score);
+  storeDailyReport = (userId, report, proofs, score, aiAnalysis) => helpers.storeDailyReport(userId, report, proofs, score, aiAnalysis);
   storeContractorProfile = (userId, profile, docs) => helpers.storeContractorProfile(userId, profile, docs);
   getNextQuestion = (field) => helpers.getNextQuestion(field);
   getContractorQuestion = (field) => helpers.getContractorQuestion(field);
+  analyzeReportWithAI = (report, proofAnalysis) => helpers.analyzeReportWithAI(report, this.geminiApiKey);
+  analyzeImageContent = (media, report) => helpers.analyzeImageContent(media, report, this.geminiApiKey);
   
   analyzeProof = (report, url, media) => 
     helpers.analyzeProof(report, url, media, this.deepseekApiKey, this.deepseekBaseUrl);
@@ -76,21 +80,28 @@ class AgentService {
 
   /**
    * Route message to appropriate workflow based on user role
-   * Only two roles: field_worker and contractor
+   * Department staff members use field_worker workflow
+   * New users are onboarded intelligently
    */
   async routeToAgent({ userId, userName, message, userContext, media, location }) {
     const role = userContext?.role;
 
+    // New user - intelligent onboarding
     if (!role) {
+      return await this.handleNewUser(userId, userName, message);
+    }
+
+    // Check if user is active
+    if (userContext.is_active === false || userContext.staff_status === 'inactive') {
       return {
-        text: 'Please register first. Contact admin to set up your account.'
+        text: 'Your account has been deactivated. Please contact your department administrator.'
       };
     }
 
-    // Field Worker - Daily reporting workflow
+    // Department Staff - Daily reporting workflow
     if (role === 'field_worker') {
       return await this.fieldWorkerWorkflow({
-        userId,
+        userId: userContext.id, // Use user.id instead of phone number
         userName,
         message,
         userContext,
@@ -98,10 +109,10 @@ class AgentService {
       });
     }
 
-    // Contractor - Onboarding and verification workflow
+    // Contractor workflow
     if (role === 'contractor') {
       return await this.contractorWorkflow({
-        userId,
+        userId: userContext.id,
         userName,
         message,
         userContext,
@@ -110,98 +121,590 @@ class AgentService {
     }
 
     return {
-      text: `Unknown role: ${role}. Please contact admin.`
+      text: `Your role is not supported for WhatsApp interactions. This service is only for department field staff and contractors.`
     };
+  }
+
+  /**
+   * Call AI API (Gemini or DeepSeek)
+   */
+  async callAI(messages, options = {}) {
+    const { temperature = 0.3, jsonMode = false, maxTokens = 500 } = options;
+
+    if (this.aiProvider === 'gemini') {
+      return await this.callGemini(messages, { temperature, jsonMode, maxTokens });
+    } else {
+      return await this.callDeepSeek(messages, { temperature, jsonMode, maxTokens });
+    }
+  }
+
+  /**
+   * Call Google Gemini API
+   */
+  async callGemini(messages, options = {}) {
+    const { temperature = 0.3, jsonMode = false, maxTokens = 500 } = options;
+
+    try {
+      // Convert messages to Gemini format
+      let prompt = '';
+      messages.forEach(msg => {
+        if (msg.role === 'system') {
+          prompt += `${msg.content}\n\n`;
+        } else if (msg.role === 'user') {
+          prompt += `User: ${msg.content}\n`;
+        } else if (msg.role === 'assistant') {
+          prompt += `Assistant: ${msg.content}\n`;
+        }
+      });
+
+      if (jsonMode) {
+        prompt += '\n\nCRITICAL: You MUST respond with ONLY valid JSON. Do not include any markdown formatting, code blocks, or explanatory text. Just the raw JSON object.';
+      }
+
+      const response = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key=${this.geminiApiKey}`,
+        {
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }],
+          generationConfig: {
+            temperature: temperature,
+            maxOutputTokens: Math.max(maxTokens, 1000), // Ensure at least 1000 tokens for JSON
+            topP: 0.95,
+            topK: 40
+          }
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          timeout: 30000 // Increased to 30 seconds
+        }
+      );
+
+      // Check if response was blocked or incomplete
+      if (!response.data.candidates || response.data.candidates.length === 0) {
+        console.error('Gemini response blocked or empty:', JSON.stringify(response.data, null, 2));
+        throw new Error('Gemini response was blocked or empty');
+      }
+
+      const candidate = response.data.candidates[0];
+      
+      // Check finish reason
+      if (candidate.finishReason === 'MAX_TOKENS') {
+        console.warn('⚠️  Gemini response truncated due to max tokens');
+      }
+
+      const text = candidate.content.parts[0].text;
+      
+      console.log('📄 Full Gemini response length:', text.length, 'chars');
+      console.log('📄 Finish reason:', candidate.finishReason);
+      
+      // If JSON mode, try to extract JSON from response
+      if (jsonMode) {
+        // Remove markdown code blocks if present
+        let cleanText = text.trim();
+        
+        console.log('🔍 Attempting JSON extraction from response...');
+        
+        // Try to extract JSON from markdown code blocks
+        const jsonMatch = cleanText.match(/```json\s*([\s\S]*?)\s*```/);
+        if (jsonMatch) {
+          cleanText = jsonMatch[1].trim();
+          console.log('✅ Extracted JSON from ```json block');
+        } else {
+          // Try generic code blocks
+          const codeMatch = cleanText.match(/```\s*([\s\S]*?)\s*```/);
+          if (codeMatch) {
+            cleanText = codeMatch[1].trim();
+            console.log('✅ Extracted JSON from ``` block');
+          } else {
+            console.log('⚠️  No code blocks found, using raw text');
+          }
+        }
+        
+        // Remove any leading/trailing backticks
+        cleanText = cleanText.replace(/^`+|`+$/g, '');
+        
+        try {
+          const parsed = JSON.parse(cleanText);
+          console.log('✅ Successfully parsed JSON');
+          return parsed;
+        } catch (parseError) {
+          console.error('❌ JSON parse error:', parseError.message);
+          console.error('📝 Raw text (first 500 chars):', text.substring(0, 500));
+          console.error('🧹 Cleaned text (first 500 chars):', cleanText.substring(0, 500));
+          throw parseError;
+        }
+      }
+
+      return text;
+
+    } catch (error) {
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        console.error('⏱️  Gemini API timeout - request took too long');
+        throw new Error('AI service timeout - please try again');
+      }
+      console.error('Gemini API error:', error.response?.data || error.message);
+      throw new Error('Failed to get response from Gemini AI');
+    }
+  }
+
+  /**
+   * Call DeepSeek API
+   */
+  async callDeepSeek(messages, options = {}) {
+    const { temperature = 0.3, jsonMode = false, maxTokens = 500 } = options;
+
+    try {
+      const requestBody = {
+        model: 'deepseek-chat',
+        messages: messages,
+        temperature: temperature,
+        max_tokens: maxTokens
+      };
+
+      if (jsonMode) {
+        requestBody.response_format = { type: 'json_object' };
+      }
+
+      const response = await axios.post(
+        `${this.deepseekBaseUrl}/chat/completions`,
+        requestBody,
+        {
+          headers: {
+            'Authorization': `Bearer ${this.deepseekApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 15000
+        }
+      );
+
+      const text = response.data.choices[0].message.content;
+      
+      if (jsonMode) {
+        return JSON.parse(text);
+      }
+
+      return text;
+
+    } catch (error) {
+      console.error('DeepSeek API error:', error.response?.data || error.message);
+      throw new Error('Failed to get response from DeepSeek AI');
+    }
+  }
+
+  /**
+   * Handle new user with intelligent routing using LLM
+   */
+  async handleNewUser(phoneNumber, userName, message) {
+    try {
+      // Get conversation history
+      const history = await this.getConversationHistory(phoneNumber, 5);
+      
+      // Don't send Telegram ID to AI - mask it
+      const displayPhone = phoneNumber.length < 15 ? 'Not provided yet' : phoneNumber;
+      
+      // Use AI to understand intent and extract information
+      const prompt = `You are a helpful government service assistant for WhatsApp/Telegram. Analyze the user's message and conversation history to determine their intent and extract relevant information.
+
+User: ${userName}
+Phone: ${displayPhone}
+Current Message: "${message}"
+
+Previous conversation:
+${history.map(h => `${h.role}: ${h.content}`).join('\n')}
+
+Determine:
+1. Is the user a contractor, field worker, or citizen?
+2. What information have they provided?
+3. What should we ask next?
+
+Return ONLY valid JSON:
+{
+  "user_type": "contractor" | "field_worker" | "citizen" | "unknown",
+  "extracted_data": {
+    "company_name": "string or null",
+    "license_number": "string or null",
+    "gst": "string or null",
+    "category": "string or null"
+  },
+  "next_action": "ask_for_details" | "create_contractor" | "register_field_worker" | "provide_info",
+  "response": "friendly response message to send to user"
+}`;
+
+      const analysis = await this.callAI([
+        { role: 'system', content: prompt },
+        { role: 'user', content: message }
+      ], { jsonMode: true, temperature: 0.3, maxTokens: 1500 });
+      
+      console.log('🧠 AI Analysis:', JSON.stringify(analysis, null, 2));
+      
+      // Handle based on AI analysis
+      if (analysis.user_type === 'contractor' && analysis.next_action === 'create_contractor') {
+        // Extract and create contractor
+        const extracted = analysis.extracted_data;
+        if (extracted.company_name && extracted.license_number && extracted.gst && extracted.category) {
+          // Create pending registration request
+          await this.createPendingRegistration({
+            userId: phoneNumber,
+            userName: userName,
+            userType: 'contractor',
+            channel: 'telegram', // or detect from context
+            data: extracted
+          });
+          
+          return {
+            text: `✅ Registration Request Submitted!\n\n` +
+                  `📋 Your Details:\n` +
+                  `Company: ${extracted.company_name}\n` +
+                  `License: ${extracted.license_number}\n` +
+                  `GST: ${extracted.gst}\n` +
+                  `Category: ${extracted.category}\n\n` +
+                  `⏳ Your request has been sent to the department for approval.\n` +
+                  `You'll be notified once it's reviewed (usually within 24-48 hours).`
+          };
+        }
+      }
+      
+      // Handle field worker registration request
+      if (analysis.user_type === 'field_worker' && analysis.next_action === 'register_field_worker') {
+        // Check if user wants to self-register
+        const lowerMessage = message.toLowerCase();
+        if (lowerMessage.includes('register') || lowerMessage.includes('sign up') || lowerMessage.includes('join') || lowerMessage.includes('field worker') || lowerMessage === '1' || lowerMessage === '1️⃣') {
+          
+          // Check if this is a Telegram ID
+          const isTelegramId = phoneNumber.length < 15 && /^\d+$/.test(phoneNumber);
+          
+          if (isTelegramId) {
+            // For Telegram, check if phone number is stored
+            const storedData = await this.getStoredPhone(phoneNumber);
+            
+            if (storedData && storedData.phone_number) {
+              // Create pending registration with actual phone number
+              await pool.query(
+                `INSERT INTO pending_registrations 
+                 (telegram_user_id, phone, full_name, user_type, channel, status, created_at)
+                 VALUES ($1, $2, $3, 'field_worker', 'telegram', 'pending', NOW())
+                 ON CONFLICT (telegram_user_id)
+                 DO UPDATE SET 
+                   phone = $2,
+                   full_name = $3,
+                   user_type = 'field_worker',
+                   status = 'pending',
+                   updated_at = NOW()`,
+                [phoneNumber, storedData.phone_number, storedData.full_name]
+              );
+              
+              return {
+                text: `✅ Field Worker Registration Request Submitted!\n\n` +
+                      `📱 Phone: ${storedData.phone_number}\n` +
+                      `👤 Name: ${storedData.full_name}\n\n` +
+                      `⏳ Your request has been sent to the department officer for approval.\n` +
+                      `You'll be notified once it's reviewed (usually within 24-48 hours).`
+              };
+            } else {
+              return {
+                text: `📝 Field Worker Registration\n\n` +
+                      `To register, please first share your contact:\n` +
+                      `Tap the 📎 button → Contact → Share My Contact\n\n` +
+                      `Then I'll guide you through the registration process.`,
+                reply_markup: {
+                  keyboard: [
+                    [{
+                      text: '📱 Share My Contact',
+                      request_contact: true
+                    }]
+                  ],
+                  resize_keyboard: true,
+                  one_time_keyboard: true
+                }
+              };
+            }
+          } else {
+            // For WhatsApp, phoneNumber is already the real phone
+            await pool.query(
+              `INSERT INTO pending_registrations 
+               (whatsapp_phone, phone, full_name, user_type, channel, status, created_at)
+               VALUES ($1, $2, $3, 'field_worker', 'whatsapp', 'pending', NOW())
+               ON CONFLICT (whatsapp_phone)
+               DO UPDATE SET 
+                 phone = $2,
+                 full_name = $3,
+                 user_type = 'field_worker',
+                 status = 'pending',
+                 updated_at = NOW()`,
+              [phoneNumber, phoneNumber, userName]
+            );
+            
+            return {
+              text: `✅ Field Worker Registration Request Submitted!\n\n` +
+                    `📱 Phone: ${phoneNumber}\n` +
+                    `👤 Name: ${userName}\n\n` +
+                    `⏳ Your request has been sent to the department officer for approval.\n` +
+                    `You'll be notified once it's reviewed (usually within 24-48 hours).`
+            };
+          }
+        }
+      }
+
+      // Return AI-generated response
+      return {
+        text: analysis.response
+      };
+
+    } catch (error) {
+      console.error('Error in intelligent routing:', error);
+      
+      // Fallback to simple keyword matching
+      const lowerMessage = message.toLowerCase();
+
+      if (lowerMessage.includes('contractor') || lowerMessage.includes('company') || lowerMessage.includes('tender')) {
+        return {
+          text: `Hi ${userName}! 👋\n\nI see you're a contractor. To register, please provide:\n\n1. Company name\n2. License number\n3. GST number\n4. Category (e.g., Civil, Electrical, Plumbing)\n\nYou can send all details in one message.`
+        };
+      }
+
+      if (lowerMessage.includes('field worker') || lowerMessage.includes('staff') || lowerMessage.includes('employee')) {
+        return {
+          text: `Hi ${userName}! 👋\n\nFor field workers, please contact your department administrator to register your phone: ${phoneNumber}`
+        };
+      }
+
+      return {
+        text: `Hi ${userName}! 👋\n\nWelcome! I can help:\n\n🏗️ *Field Workers* - Daily reports\n📋 *Contractors* - Registration\n\nWhat are you?`
+      };
+    }
   }
 
   /**
    * 🏗️ FIELD WORKER WORKFLOW
    * Daily reporting with structured extraction
    */
-  async fieldWorkerWorkflow({ userId, userName, message, userContext, media }) {
-    try {
-      // Load or create today's report state
-      const state = await this.loadFieldWorkerState(userId);
-
-      // Check if report already submitted today
-      if (state.status === 'complete') {
-        return {
-          text: `You've already submitted your report today! ✅\n\nSummary:\n` +
-                `Site: ${state.report.site}\n` +
-                `Hours: ${state.report.hours}\n` +
-                `Work: ${state.report.description}\n\n` +
-                `See you tomorrow! 👷`
-        };
-      }
-
-      // Handle proof upload
-      if (media) {
-        const proofUrl = await this.uploadProofToBlob(userId, media);
-        state.proofs.push(proofUrl);
+  /**
+     * 🏗️ FIELD WORKER WORKFLOW
+     * Conversational daily reporting - ask questions one by one
+     */
+    async fieldWorkerWorkflow({ userId, userName, message, userContext, media }) {
+      try {
+        console.log(`\n🏗️ Field Worker Workflow - User: ${userId}, Message: "${message}"`);
         
-        // Analyze proof with DeepSeek
-        const proofAnalysis = await this.analyzeProof(state.report, proofUrl, media);
+        // Load or create today's report state
+        const state = await this.loadFieldWorkerState(userId);
         
-        if (proofAnalysis.proof_valid) {
-          // Calculate productivity score
-          const score = await this.calculateProductivityScore(state.report, proofAnalysis);
-          
-          // Store in database
-          await this.storeDailyReport(userId, state.report, state.proofs, score);
-          
-          state.status = 'complete';
+        console.log(`📊 Current state:`, {
+          status: state.status,
+          currentQuestion: state.currentQuestion,
+          missingFields: state.missingFields,
+          report: state.report
+        });
+
+        // Check if report already submitted today
+        if (state.status === 'complete') {
+          return {
+            text: `You've already submitted your report today! ✅\n\nSummary:\n` +
+                  `📍 Site: ${state.report.site}\n` +
+                  `⏰ Hours: ${state.report.hours}\n` +
+                  `📝 Work: ${state.report.description}\n\n` +
+                  `See you tomorrow! 👷`
+          };
+        }
+
+        // Handle image/proof upload
+        if (media) {
+          // Analyze the image with AI
+          try {
+            const proofUrl = await this.uploadProofToBlob(userId, media);
+
+            // Use AI to analyze what's in the image
+            const imageAnalysis = await this.analyzeImageContent(media, state.report);
+
+            // If we don't have description yet, use image analysis
+            if (!state.report.description && imageAnalysis.description) {
+              state.report.description = imageAnalysis.description;
+              state.missingFields = state.missingFields.filter(f => f !== 'description');
+            }
+
+            // Store the proof
+            state.proofs.push(proofUrl);
+            await this.saveFieldWorkerState(userId, state);
+
+            // If we still have missing fields, ask for them
+            if (state.missingFields.length > 0) {
+              let response = `📸 Got your photo! `;
+              if (imageAnalysis.description) {
+                response += `I can see: ${imageAnalysis.description}\n\n`;
+              }
+
+              // Ask next question
+              if (state.missingFields.includes('site')) {
+                response += `Which site or location is this?`;
+              } else if (state.missingFields.includes('hours')) {
+                response += `How many hours did you work on this?`;
+              }
+
+              return { text: response };
+            }
+
+            // All fields collected, submit report
+            const score = await this.calculateProductivityScore(state.report, { proof_valid: true, confidence: 0.9 });
+            const aiAnalysis = await this.analyzeReportWithAI(state.report, { proof_valid: true });
+            aiAnalysis.channel = 'telegram';
+
+            await this.storeDailyReport(userId, state.report, state.proofs, score, aiAnalysis);
+
+            state.status = 'complete';
+            await this.saveFieldWorkerState(userId, state);
+
+            return {
+              text: `✅ Report submitted successfully!\n\n` +
+                    `📊 Productivity Score: ${score.toFixed(1)}/10\n` +
+                    `🤖 AI Analysis: ${aiAnalysis.summary}\n\n` +
+                    `Great work today! 💪`
+            };
+
+          } catch (error) {
+            console.error('Error processing image:', error);
+            return {
+              text: `📸 Photo received! Please continue with your report details.`
+            };
+          }
+        }
+
+        // Initialize conversation tracking
+        if (!state.currentQuestion) {
+          state.currentQuestion = 'description';
+        }
+
+        // Process text message based on current question
+        const lowerMessage = message.toLowerCase().trim();
+
+        // Check if all required fields are already filled
+        const allFieldsFilled = state.report.description && state.report.site && state.report.hours;
+        
+        // If all fields are filled but currentQuestion is not 'proof', update it
+        if (allFieldsFilled && state.currentQuestion !== 'proof') {
+          console.log(`✅ All fields filled, moving to proof stage`);
+          state.currentQuestion = 'proof';
+          state.missingFields = [];
           await this.saveFieldWorkerState(userId, state);
           
           return {
-            text: `✅ Report submitted successfully!\n\n` +
-                  `📊 Productivity Score: ${score.toFixed(1)}/10\n` +
-                  `${proofAnalysis.explanation}\n\n` +
-                  `Great work today! 💪`
-          };
-        } else {
-          return {
-            text: `⚠️ Proof validation issue:\n${proofAnalysis.explanation}\n\n` +
-                  `Please upload a clearer photo showing the completed work.`
+            text: `I have all your details:\n\n` +
+                  `📝 Work: ${state.report.description}\n` +
+                  `📍 Site: ${state.report.site}\n` +
+                  `⏰ Hours: ${state.report.hours}\n\n` +
+                  `Now please send a photo of your completed work as proof. 📸`
           };
         }
-      }
 
-      // Extract structured data from message
-      const extracted = await this.extractReportFields(message, state.report);
-      
-      // Update state
-      state.report = { ...state.report, ...extracted.fields };
-      state.missingFields = extracted.missing_fields;
+        // Handle greetings
+        if (!state.report.description && (lowerMessage === 'hi' || lowerMessage === 'hello' || lowerMessage === 'hey')) {
+          // Initialize state properly for first interaction
+          if (!state.currentQuestion) {
+            state.currentQuestion = 'description';
+            await this.saveFieldWorkerState(userId, state);
+          }
+          
+          return {
+            text: `Hi ${userName}! 👋\n\nReady to submit your daily work report?\n\nLet's start: What work did you do today?`
+          };
+        }
 
-      // Check if we have all required fields
-      if (state.missingFields.length === 0) {
-        // Request proof
-        await this.saveFieldWorkerState(userId, state);
+        // Collect answer based on current question
+        if (state.currentQuestion === 'description' && !state.report.description) {
+          state.report.description = message;
+          state.missingFields = state.missingFields.filter(f => f !== 'description');
+          state.currentQuestion = 'site';
+          await this.saveFieldWorkerState(userId, state);
+          
+          console.log(`✅ Saved description: "${message}", next question: site`);
+
+          return {
+            text: `Got it! 📝\n\nWork: ${message}\n\nWhich site or location did you work at?`
+          };
+        }
+
+        if (state.currentQuestion === 'site' && !state.report.site) {
+          state.report.site = message;
+          state.missingFields = state.missingFields.filter(f => f !== 'site');
+          state.currentQuestion = 'hours';
+          await this.saveFieldWorkerState(userId, state);
+          
+          console.log(`✅ Saved site: "${message}", next question: hours`);
+
+          return {
+            text: `Perfect! 📍\n\nSite: ${message}\n\nHow many hours did you work? (Just send the number)`
+          };
+        }
+
+        if (state.currentQuestion === 'hours' && !state.report.hours) {
+          // Extract number from message
+          const hoursMatch = message.match(/\d+/);
+          if (hoursMatch) {
+            state.report.hours = parseInt(hoursMatch[0]);
+            state.missingFields = state.missingFields.filter(f => f !== 'hours');
+            state.currentQuestion = 'proof';
+            await this.saveFieldWorkerState(userId, state);
+            
+            console.log(`✅ Saved hours: ${state.report.hours}, next question: proof`);
+
+            return {
+              text: `Excellent! ⏰\n\nHours: ${state.report.hours}\n\nNow please send a photo of your completed work as proof. 📸`
+            };
+          } else {
+            return {
+              text: `Please send just the number of hours (e.g., "8" or "6.5")`
+            };
+          }
+        }
+
+        if (state.currentQuestion === 'proof') {
+          return {
+            text: `Please send a photo of your completed work. 📸\n\nYou can attach an image using the 📎 button.`
+          };
+        }
+
+        // Fallback - if we reach here, something is wrong, ask what's missing
+        console.log(`⚠️ Fallback triggered - checking what's missing`);
+        
+        if (!state.report.description) {
+          state.currentQuestion = 'description';
+          await this.saveFieldWorkerState(userId, state);
+          return {
+            text: `Hi ${userName}! 👋\n\nLet's start your daily report.\n\nWhat work did you do today?`
+          };
+        } else if (!state.report.site) {
+          state.currentQuestion = 'site';
+          await this.saveFieldWorkerState(userId, state);
+          return {
+            text: `Which site or location did you work at?`
+          };
+        } else if (!state.report.hours) {
+          state.currentQuestion = 'hours';
+          await this.saveFieldWorkerState(userId, state);
+          return {
+            text: `How many hours did you work? (Just send the number)`
+          };
+        } else {
+          // All fields filled, ask for proof
+          state.currentQuestion = 'proof';
+          await this.saveFieldWorkerState(userId, state);
+          return {
+            text: `Please send a photo of your completed work as proof. 📸`
+          };
+        }
+
+      } catch (error) {
+        console.error('Error in field worker workflow:', error);
         return {
-          text: `Great! I have all the details:\n\n` +
-                `📍 Site: ${state.report.site}\n` +
-                `⏰ Hours: ${state.report.hours}\n` +
-                `📝 Work: ${state.report.description}\n` +
-                `${state.report.blockers ? `⚠️ Blockers: ${state.report.blockers}\n` : ''}\n` +
-                `Now please send a photo of your completed work as proof. 📸`
+          text: 'Sorry, I encountered an error processing your report. Please try again.'
         };
       }
-
-      // Ask for missing field
-      await this.saveFieldWorkerState(userId, state);
-      const nextQuestion = this.getNextQuestion(state.missingFields[0]);
-      
-      return {
-        text: nextQuestion
-      };
-
-    } catch (error) {
-      console.error('Error in field worker workflow:', error);
-      return {
-        text: 'Sorry, I encountered an error processing your report. Please try again.'
-      };
     }
-  }
+
 
   /**
    * 🏗️ CONTRACTOR WORKFLOW
@@ -315,59 +818,48 @@ class AgentService {
   }
 
   /**
-   * 🧠 DEEPSEEK: Extract structured report fields
+   * 🧠 AI: Extract structured report fields
    */
   async extractReportFields(message, currentReport) {
-    const prompt = `You are a government monitoring assistant extracting daily work report fields.
+    const prompt = `You are a government field worker assistant. Extract ONLY explicitly mentioned information from the message.
 
 Current report data: ${JSON.stringify(currentReport)}
 
 User message: "${message}"
 
-Extract and return ONLY valid JSON with this exact structure:
+Return ONLY valid JSON:
 {
   "fields": {
-    "description": "string or null",
-    "site": "string or null",
-    "hours": number or null,
-    "blockers": "string or null"
+    "description": "what work was done - ONLY if explicitly mentioned (string or null)",
+    "site": "work location/site name - ONLY if explicitly mentioned (string or null)",
+    "hours": "hours worked as number - ONLY if explicitly mentioned (number or null)",
+    "blockers": "any issues/problems - ONLY if explicitly mentioned (string or null)"
   },
-  "missing_fields": ["array of missing field names"]
+  "missing_fields": ["list fields that are still null"]
 }
 
-Required fields: description, site, hours
-Optional: blockers
+CRITICAL RULES:
+1. ONLY extract information that is EXPLICITLY stated
+2. DO NOT guess or infer - if not clearly mentioned, return null
+3. DO NOT fill in fields based on assumptions
+4. If user just says "hi" or casual chat, return all nulls
+5. hours must be a NUMBER (1-24), not a string
+6. missing_fields should list: description, site, hours (only if still null)
 
-Rules:
-- Only extract fields explicitly mentioned
-- hours must be a number (1-24)
-- Return null for fields not mentioned
-- missing_fields should list: description, site, hours (only if still missing)`;
+Examples:
+- "Fixed pipes" → description: "Fixed pipes", site: null, hours: null
+- "at Kansai section" → site: "Kansai section", description: null, hours: null  
+- "8 hours" → hours: 8, description: null, site: null
+- "Hi" → all null
+- "Worked 8 hours at Zone A fixing leaks" → all fields extracted`;
 
     try {
-      const response = await axios.post(
-        `${this.deepseekBaseUrl}/chat/completions`,
-        {
-          model: 'deepseek-chat',
-          messages: [
-            { role: 'system', content: prompt },
-            { role: 'user', content: message }
-          ],
-          temperature: 0.1,
-          response_format: { type: 'json_object' }
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${this.deepseekApiKey}`,
-            'Content-Type': 'application/json'
-          },
-          timeout: 15000
-        }
-      );
-
-      const result = JSON.parse(response.data.choices[0].message.content);
+      const result = await this.callAI([
+        { role: 'system', content: prompt },
+        { role: 'user', content: message }
+      ], { jsonMode: true, temperature: 0.1, maxTokens: 2000 });
       
-      // Merge with current report
+      // Merge with current report - don't overwrite existing data with null
       const merged = { ...currentReport };
       Object.keys(result.fields).forEach(key => {
         if (result.fields[key] !== null) {
@@ -385,15 +877,15 @@ Rules:
       };
 
     } catch (error) {
-      console.error('DeepSeek extraction error:', error);
+      console.error('AI extraction error:', error);
       throw error;
     }
   }
 
   /**
-   * Chat with DeepSeek LLM
+   * Chat with AI (Gemini or DeepSeek)
    */
-  async chatWithDeepSeek(userId, message, systemContext) {
+  async chatWithAI(userId, message, systemContext) {
     try {
       // Get conversation history
       const history = await this.getConversationHistory(userId, 5);
@@ -413,30 +905,90 @@ Rules:
         }
       ];
 
-      const response = await axios.post(
-        `${this.deepseekBaseUrl}/chat/completions`,
-        {
-          model: 'deepseek-chat',
-          messages: messages,
-          temperature: 0.7,
-          max_tokens: 500
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${this.deepseekApiKey}`,
-            'Content-Type': 'application/json'
-          },
-          timeout: 30000
-        }
-      );
+      const response = await this.callAI(messages, { temperature: 0.7, maxTokens: 500 });
 
       return {
-        text: response.data.choices[0].message.content
+        text: response
       };
 
     } catch (error) {
-      console.error('DeepSeek API error:', error.response?.data || error.message);
+      console.error('AI API error:', error.message);
       throw new Error('Failed to get response from AI');
+    }
+  }
+
+  /**
+   * Store user phone number temporarily
+   */
+  async storeUserPhone(telegramUserId, phoneNumber, fullName) {
+    try {
+      await pool.query(
+        `INSERT INTO user_temp_data (telegram_user_id, phone_number, full_name, created_at)
+         VALUES ($1, $2, $3, NOW())
+         ON CONFLICT (telegram_user_id)
+         DO UPDATE SET phone_number = $2, full_name = $3, updated_at = NOW()`,
+        [telegramUserId, phoneNumber, fullName]
+      );
+    } catch (error) {
+      console.error('Error storing user phone:', error);
+    }
+  }
+
+  /**
+   * Get stored phone number
+   */
+  async getStoredPhone(telegramUserId) {
+    try {
+      const result = await pool.query(
+        'SELECT phone_number, full_name FROM user_temp_data WHERE telegram_user_id = $1',
+        [telegramUserId]
+      );
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error('Error getting stored phone:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Create pending registration request
+   */
+  async createPendingRegistration({ userId, userName, userType, channel, data }) {
+    try {
+      const result = await pool.query(
+        `INSERT INTO pending_registrations 
+         (telegram_user_id, whatsapp_phone, full_name, user_type, channel, 
+          company_name, license_number, gst_number, category, status, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', NOW())
+         ON CONFLICT (telegram_user_id) 
+         DO UPDATE SET 
+           full_name = $3,
+           company_name = $6,
+           license_number = $7,
+           gst_number = $8,
+           category = $9,
+           status = 'pending',
+           updated_at = NOW()
+         RETURNING id`,
+        [
+          channel === 'telegram' ? userId : null,
+          channel === 'whatsapp' ? userId : null,
+          userName,
+          userType,
+          channel,
+          data.company_name,
+          data.license_number,
+          data.gst,
+          data.category
+        ]
+      );
+
+      console.log(`✅ Pending registration created: ${result.rows[0].id}`);
+      return result.rows[0].id;
+
+    } catch (error) {
+      console.error('Error creating pending registration:', error);
+      throw error;
     }
   }
 
@@ -474,21 +1026,65 @@ Rules:
 
   /**
    * Get user context from database
+   * For Telegram: First check if we have stored phone, otherwise return null
+   * For WhatsApp: phoneNumber is the actual phone number
    */
-  async getUserContext(phoneNumber) {
+  async getUserContext(userId) {
     try {
+      // Check if this is a Telegram ID (numeric, short)
+      const isTelegramId = userId.length < 15 && /^\d+$/.test(userId);
+      
+      if (isTelegramId) {
+        // For Telegram, get the stored phone number first
+        const storedData = await this.getStoredPhone(userId);
+        if (!storedData || !storedData.phone_number) {
+          // No phone number stored yet
+          return null;
+        }
+        // Use the real phone number for lookup
+        userId = storedData.phone_number;
+      }
+      
+      // Check if user exists in users table with phone number
+      // and is a department officer (staff member)
       const result = await pool.query(
-        `SELECT u.id, u.name, u.role, u.department_id, d.name as department_name
+        `SELECT u.id, u.full_name, u.role, u.department_id, u.status as is_active, 
+                d.name as department_name,
+                doff.staff_id, doff.role as staff_role, doff.zone, doff.ward, 
+                doff.status as staff_status, doff.specialization
          FROM users u
          LEFT JOIN departments d ON u.department_id = d.id
-         WHERE u.phone = $1`,
-        [phoneNumber]
+         LEFT JOIN departmentofficers doff ON doff.user_id = u.id
+         WHERE u.phone = $1 
+           AND u.status = 'active'
+           AND u.role IN ('department_officer', 'department_head')
+           AND doff.staff_id IS NOT NULL`,
+        [userId]
       );
 
-      return result.rows[0] || null;
+      if (result.rows.length > 0) {
+        const user = result.rows[0];
+        return {
+          id: user.id,
+          name: user.full_name,
+          full_name: user.full_name,
+          role: 'field_worker', // Map department_officer to field_worker for workflow
+          department_id: user.department_id,
+          department_name: user.department_name,
+          is_active: user.is_active === 'active',
+          staff_id: user.staff_id,
+          staff_role: user.staff_role,
+          zone: user.zone,
+          ward: user.ward,
+          staff_status: user.staff_status,
+          specialization: user.specialization
+        };
+      }
+
+      return null;
     } catch (error) {
       console.error('Error getting user context:', error);
-      return null;
+      throw error; // Re-throw to see the actual error
     }
   }
 

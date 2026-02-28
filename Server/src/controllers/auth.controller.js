@@ -5,9 +5,23 @@ import crypto from 'crypto';
 import pool from '../config/database.js';
 import { mapRoleCodeToSystemRole } from './roles.controller.js';
 
-const generateTokens = (userId) => {
+const generateTokens = (userId, userData = {}) => {
+  console.log('📝 generateTokens called with:', {
+    userId,
+    userData
+  });
+  
+  const tokenPayload = { 
+    userId, 
+    type: 'access',
+    role: userData.role,
+    department_id: userData.department_id
+  };
+  
+  console.log('📝 Token payload:', tokenPayload);
+  
   const accessToken = jwt.sign(
-    { userId, type: 'access' },
+    tokenPayload,
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
   );
@@ -196,7 +210,10 @@ export const register = async (req, res) => {
       const citizen = result.rows[0];
 
       // Generate tokens for citizen
-      const { accessToken, refreshToken } = generateTokens(citizen.id);
+      const { accessToken, refreshToken } = generateTokens(citizen.id, {
+        role: 'citizen',
+        department_id: null
+      });
 
       // For citizens, we'll store refresh token in citizens table itself
       // instead of refreshtokens table (which has foreign key to users table)
@@ -822,7 +839,18 @@ export const login = async (req, res) => {
     }
 
     // Generate tokens
-    const { accessToken, refreshToken } = generateTokens(user.id);
+    const userData = {
+      role: isCitizen ? 'citizen' : user.role,
+      department_id: isCitizen ? null : user.department_id
+    };
+    
+    console.log('🔑 Generating tokens for user:', {
+      userId: user.id,
+      email: user.email,
+      userData: userData
+    });
+    
+    const { accessToken, refreshToken } = generateTokens(user.id, userData);
 
     // Revoke old refresh tokens and insert new one
     await pool.query(
@@ -883,8 +911,9 @@ export const refreshToken = async (req, res) => {
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
     const result = await pool.query(
-      `SELECT * FROM refreshtokens 
-       WHERE token = $1 AND user_id = $2 AND revoked = false AND expires_at > NOW()`,
+      `SELECT rt.*, rt.user_type 
+       FROM refreshtokens rt
+       WHERE rt.token = $1 AND rt.user_id = $2 AND rt.revoked = false AND rt.expires_at > NOW()`,
       [refreshToken, decoded.userId]
     );
 
@@ -892,7 +921,34 @@ export const refreshToken = async (req, res) => {
       return res.status(401).json({ error: 'Invalid refresh token' });
     }
 
-    const tokens = generateTokens(decoded.userId);
+    const tokenData = result.rows[0];
+    const isCitizen = tokenData.user_type === 'citizen';
+
+    // Fetch user data to include in new token
+    let userData = { role: null, department_id: null };
+    
+    if (isCitizen) {
+      const citizenResult = await pool.query(
+        'SELECT id FROM citizens WHERE id = $1',
+        [decoded.userId]
+      );
+      if (citizenResult.rows.length > 0) {
+        userData = { role: 'citizen', department_id: null };
+      }
+    } else {
+      const userResult = await pool.query(
+        'SELECT role, department_id FROM users WHERE id = $1',
+        [decoded.userId]
+      );
+      if (userResult.rows.length > 0) {
+        userData = {
+          role: userResult.rows[0].role,
+          department_id: userResult.rows[0].department_id
+        };
+      }
+    }
+
+    const tokens = generateTokens(decoded.userId, userData);
 
     await pool.query(
       'UPDATE refreshtokens SET revoked = true WHERE token = $1',
@@ -900,9 +956,9 @@ export const refreshToken = async (req, res) => {
     );
 
     await pool.query(
-      `INSERT INTO refreshtokens (user_id, token, expires_at)
-       VALUES ($1, $2, NOW() + INTERVAL '7 days')`,
-      [decoded.userId, tokens.refreshToken]
+      `INSERT INTO refreshtokens (user_id, token, expires_at, user_type)
+       VALUES ($1, $2, NOW() + INTERVAL '7 days', $3)`,
+      [decoded.userId, tokens.refreshToken, isCitizen ? 'citizen' : 'user']
     );
 
     res.json(tokens);

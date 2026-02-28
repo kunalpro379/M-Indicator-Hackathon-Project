@@ -44,9 +44,7 @@ function OfficerLayout({ onLogout, userAuth, basePath }) {
   };
 
   const navItems = [
-    { path: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { path: "role-dashboard", label: getRoleDisplayName(), icon: BarChart3 },
-    { path: "grievances", label: "Grievances", icon: FileText },
+    { path: "dashboard", label: "City Commissioner Dashboard", icon: LayoutDashboard },
     { path: "heatmap", label: "Area Heatmap", icon: Map },
     { path: "chat", label: "Chat", icon: MessageSquare },
     { path: "announcements", label: "Announcements", icon: Megaphone },
@@ -152,7 +150,7 @@ function OfficerLayout({ onLogout, userAuth, basePath }) {
                   {navItems.find(item => isActive(item.path))?.label || 'Dashboard'}
                 </h2>
                 <p className="text-xs md:text-sm text-gray-600 mt-0.5">
-                  {userAuth?.username || 'Officer'} • {mockUserData.department}
+                  {userAuth?.full_name || userAuth?.username || 'City Commissioner'}
                 </p>
               </div>
 

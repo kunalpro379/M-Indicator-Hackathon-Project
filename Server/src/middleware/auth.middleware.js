@@ -49,6 +49,41 @@ export const requireAdmin = (req, res, next) => {
 };
 
 /**
+ * Middleware to authorize specific roles
+ */
+export const authorizeRoles = (...roles) => {
+  return (req, res, next) => {
+    // Flatten the roles array in case it's nested
+    const flatRoles = roles.flat();
+    
+    console.log('🔐 Authorization check:', {
+      requiredRoles: flatRoles,
+      userRole: req.user?.role,
+      userId: req.user?.userId,
+      fullUser: req.user
+    });
+    
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    if (!flatRoles.includes(req.user.role)) {
+      console.log('❌ Authorization failed - role mismatch');
+      return res.status(403).json({
+        success: false,
+        message: `Access denied. Required roles: ${flatRoles.join(', ')}, but user has role: ${req.user.role}`
+      });
+    }
+
+    console.log('✅ Authorization successful');
+    next();
+  };
+};
+
+/**
  * Middleware to check if user has specific role
  */
 export const requireRole = (roles) => {

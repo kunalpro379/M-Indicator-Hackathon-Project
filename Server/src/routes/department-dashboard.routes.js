@@ -993,7 +993,8 @@ router.get('/:depId/staff', authenticate, verifyDepartmentAccess, async (req, re
     const { depId } = req.params;
     const departmentId = depId; // depId is actually department_id (UUID) now
     
-    const result = await pool.query(
+    // Get existing staff
+    const staffResult = await pool.query(
       `SELECT 
         dept_off.staff_id, dept_off.role, dept_off.zone, dept_off.ward, dept_off.status, dept_off.workload, dept_off.specialization,
         dept_off.performance_score, dept_off.avg_resolution_time, dept_off.total_assigned, dept_off.total_resolved,
@@ -1004,10 +1005,148 @@ router.get('/:depId/staff', authenticate, verifyDepartmentAccess, async (req, re
       ORDER BY dept_off.staff_id`,
       [departmentId]
     );
-    res.json({ success: true, data: result.rows });
+    
+    // Get pending registration requests for field workers
+    const pendingResult = await pool.query(
+      `SELECT 
+        pr.id,
+        pr.telegram_user_id,
+        pr.phone,
+        pr.full_name,
+        pr.specialization,
+        pr.zone,
+        pr.ward,
+        pr.status,
+        pr.created_at
+      FROM pending_registrations pr
+      WHERE pr.user_type = 'field_worker'
+        AND pr.status = 'pending'
+        AND (pr.department_id = $1 OR pr.department_id IS NULL)
+      ORDER BY pr.created_at DESC`,
+      [departmentId]
+    );
+    
+    res.json({ 
+      success: true, 
+      data: staffResult.rows,
+      pending_requests: pendingResult.rows
+    });
   } catch (error) {
     console.error('Error fetching staff:', error);
     res.status(500).json({ error: 'Failed to fetch staff' });
+  }
+});
+
+// Approve pending staff registration
+router.post('/:depId/staff/approve/:requestId', authenticate, verifyDepartmentAccess, async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    const { depId, requestId } = req.params;
+    const departmentId = depId;
+    
+    // Get pending registration
+    const regResult = await client.query(
+      'SELECT * FROM pending_registrations WHERE id = $1 AND status = $2',
+      [requestId, 'pending']
+    );
+    
+    if (regResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+    
+    const registration = regResult.rows[0];
+    
+    // Create user account
+    const userResult = await client.query(
+      `INSERT INTO users (full_name, phone, role, department_id, status, password_hash)
+       VALUES ($1, $2, 'department_officer', $3, 'active', 'telegram_whatsapp_user')
+       RETURNING id`,
+      [registration.full_name, registration.phone, departmentId]
+    );
+    
+    const userId = userResult.rows[0].id;
+    
+    // Create citizen record
+    await client.query(
+      `INSERT INTO citizens (user_id, phone, full_name)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (user_id) DO NOTHING`,
+      [userId, registration.phone, registration.full_name]
+    );
+    
+    // Create department officer record
+    const staffId = `STAFF-${Date.now().toString().slice(-6)}`;
+    await client.query(
+      `INSERT INTO departmentofficers 
+       (staff_id, user_id, department_id, role, zone, ward, specialization, status)
+       VALUES ($1, $2, $3, 'field_worker', $4, $5, $6, 'active')`,
+      [staffId, userId, departmentId, registration.zone, registration.ward, registration.specialization]
+    );
+    
+    // Update pending registration
+    await client.query(
+      `UPDATE pending_registrations 
+       SET status = 'approved', 
+           reviewed_by = $1, 
+           reviewed_at = NOW(),
+           department_id = $2,
+           updated_at = NOW()
+       WHERE id = $3`,
+      [req.user.id, departmentId, requestId]
+    );
+    
+    await client.query('COMMIT');
+    
+    res.json({ 
+      success: true, 
+      message: 'Staff member approved and added',
+      data: { userId, staffId }
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error approving staff:', error);
+    res.status(500).json({ success: false, message: 'Failed to approve request' });
+  } finally {
+    client.release();
+  }
+});
+
+// Reject pending staff registration
+router.post('/:depId/staff/reject/:requestId', authenticate, verifyDepartmentAccess, async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { reason } = req.body;
+    
+    const result = await pool.query(
+      `UPDATE pending_registrations 
+       SET status = 'rejected', 
+           reviewed_by = $1, 
+           reviewed_at = NOW(),
+           rejection_reason = $2,
+           updated_at = NOW()
+       WHERE id = $3 AND status = 'pending'
+       RETURNING *`,
+      [req.user.id, reason, requestId]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Request rejected',
+      data: result.rows[0]
+    });
+    
+  } catch (error) {
+    console.error('Error rejecting staff:', error);
+    res.status(500).json({ success: false, message: 'Failed to reject request' });
   }
 });
 
