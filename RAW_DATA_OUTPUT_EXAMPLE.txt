@@ -1,0 +1,1023 @@
+================================================================================
+EXAMPLE OF RAW POLICY DATA OUTPUT (UNFORMATTED)
+================================================================================
+
+This is exactly what you will see when you click "Reload with REACT Agent"
+and then click "Show Raw Data". The data is completely unformatted and 
+extracted as-is from the database.
+
+================================================================================
+
+POLICY 1
+ID: 1
+TITLE: Traffic Violation Policy
+DEPARTMENT_ID: 1
+CREATED_AT: 2024-01-15T10:30:00.000Z
+FILE_URL: https://storage.azure.com/policies/traffic-policy.pdf
+SIMILARITY_SCORE: 0.8523
+METADATA: {"category":"traffic","version":"2.1","last_updated":"2024-01-15","approved_by":"Department Head"}
+CONTENT:
+# Traffic Violation Policy
+
+## Overview
+This document outlines the comprehensive policy for handling traffic violations within the jurisdiction of the Traffic Management Department.
+
+## Scope
+This policy applies to all traffic violations including but not limited to:
+- Speeding violations
+- Parking infractions
+- Signal violations
+- Lane discipline violations
+- Vehicle documentation issues
+
+## Procedures
+
+### 1. Violation Detection
+Traffic violations may be detected through:
+- Manual observation by traffic police
+- Automated camera systems
+- Citizen complaints
+- Routine vehicle checks
+
+### 2. Citation Process
+When a violation is detected:
+1. Officer records violation details
+2. Vehicle and driver information collected
+3. Citation issued with violation code
+4. Photographic evidence captured if available
+5. Citation entered into central database
+
+### 3. Fine Structure
+Fines are categorized based on severity:
+- Minor violations: ₹500 - ₹1,000
+- Moderate violations: ₹1,000 - ₹5,000
+- Major violations: ₹5,000 - ₹10,000
+- Severe violations: ₹10,000+ and possible license suspension
+
+### 4. Payment Options
+Violators can pay fines through:
+- Online payment portal
+- Designated bank branches
+- Traffic police stations
+- Mobile payment apps
+
+### 5. Appeal Process
+Citizens have the right to appeal:
+- Appeal must be filed within 30 days
+- Supporting evidence must be provided
+- Review by designated officer
+- Decision communicated within 15 working days
+
+## Enforcement Guidelines
+
+### Officer Responsibilities
+- Maintain professional conduct
+- Issue citations fairly and without bias
+- Provide clear explanation of violation
+- Ensure proper documentation
+- Respect citizen rights
+
+### Technology Integration
+- Use of body cameras mandatory
+- GPS tracking of patrol vehicles
+- Real-time database updates
+- Digital evidence management
+
+## Compliance and Monitoring
+
+### Regular Audits
+- Monthly review of citation patterns
+- Quarterly analysis of violation trends
+- Annual policy effectiveness assessment
+
+### Training Requirements
+- All officers must complete annual training
+- Updates on new traffic laws
+- Customer service training
+- Technology system training
+
+## Amendments
+This policy is subject to periodic review and may be amended based on:
+- Changes in traffic laws
+- Technological advancements
+- Public feedback
+- Departmental requirements
+
+## Contact Information
+For queries or clarifications:
+- Email: traffic@department.gov.in
+- Phone: 1800-XXX-XXXX
+- Website: www.trafficdept.gov.in
+
+---
+Last Updated: January 15, 2024
+Version: 2.1
+Approved By: Department Head, Traffic Management
+
+================================================================================
+
+POLICY 2
+ID: 2
+TITLE: Parking Regulations and Enforcement
+DEPARTMENT_ID: 1
+CREATED_AT: 2024-01-20T14:45:30.000Z
+FILE_URL: N/A
+SIMILARITY_SCORE: 0.7891
+METADATA: {"category":"parking","version":"1.5","zones":["Zone A","Zone B","Zone C"]}
+CONTENT:
+# Parking Regulations and Enforcement
+
+## Introduction
+This policy establishes guidelines for parking management, enforcement, and citizen compliance within the city limits.
+
+## Parking Zones
+
+### Zone A - Commercial Areas
+- Paid parking: ₹20 per hour
+- Maximum duration: 4 hours
+- Operating hours: 8 AM - 10 PM
+- Enforcement: Strict
+
+### Zone B - Residential Areas
+- Free parking for residents with permits
+- Visitor parking: ₹10 per hour
+- Maximum duration: 2 hours for visitors
+- Operating hours: 24/7
+
+### Zone C - Mixed Use Areas
+- First hour free
+- Subsequent hours: ₹15 per hour
+- Maximum duration: 6 hours
+- Operating hours: 6 AM - 12 AM
+
+## Parking Permits
+
+### Resident Permits
+- Annual fee: ₹1,000
+- Valid for one vehicle
+- Renewable annually
+- Requires proof of residence
+
+### Commercial Permits
+- Monthly fee: ₹5,000
+- Valid for designated area
+- Transferable within organization
+- Requires business registration
+
+### Temporary Permits
+- Daily rate: ₹200
+- Valid for 24 hours
+- Available at parking offices
+- No advance booking required
+
+## Prohibited Parking
+
+### Absolute No-Parking Zones
+- Fire hydrant areas (10-meter radius)
+- Bus stops (15-meter radius)
+- Pedestrian crossings
+- Emergency vehicle access routes
+- Disabled parking spaces (without permit)
+
+### Time-Restricted Zones
+- School zones during school hours
+- Market areas during peak hours
+- Religious places during festivals
+- Event venues during events
+
+## Enforcement Measures
+
+### Violation Detection
+- Parking enforcement officers
+- CCTV surveillance
+- Mobile patrol units
+- Citizen reporting app
+
+### Penalties
+- First offense: ₹500 fine
+- Second offense: ₹1,000 fine
+- Third offense: ₹2,000 fine + vehicle towing
+- Repeated offenses: License suspension consideration
+
+### Towing Policy
+Vehicles may be towed if:
+- Parked in no-parking zone
+- Blocking traffic flow
+- Abandoned for more than 48 hours
+- Parked in emergency access areas
+- Multiple unpaid violations
+
+### Towing Charges
+- Two-wheeler: ₹500
+- Four-wheeler: ₹1,500
+- Commercial vehicle: ₹3,000
+- Storage charges: ₹100 per day
+
+## Payment and Recovery
+
+### Payment Methods
+- Online portal
+- Mobile app
+- Parking offices
+- Authorized collection centers
+
+### Grace Period
+- 15 days from violation date
+- No additional charges during grace period
+- Late payment penalty: 10% per month
+
+### Vehicle Release
+To recover towed vehicle:
+1. Pay all outstanding fines
+2. Pay towing charges
+3. Pay storage charges
+4. Present valid documents
+5. Sign release form
+
+## Disabled Parking
+
+### Eligibility
+- Valid disability certificate
+- Vehicle registered in disabled person's name
+- Annual permit required
+
+### Benefits
+- Free parking in designated spaces
+- Extended time limits
+- Priority parking locations
+
+### Enforcement
+- Strict penalties for misuse
+- Fine: ₹5,000 for unauthorized use
+- Permit verification mandatory
+
+## Technology Integration
+
+### Smart Parking System
+- Real-time space availability
+- Mobile app for booking
+- Automated payment system
+- Digital permit management
+
+### Surveillance
+- CCTV coverage in all zones
+- Automatic number plate recognition
+- Violation detection algorithms
+- Evidence management system
+
+## Citizen Services
+
+### Information Channels
+- Website: www.parking.gov.in
+- Helpline: 1800-XXX-YYYY
+- Mobile app: CityPark
+- Email: parking@city.gov.in
+
+### Complaint Resolution
+- Online complaint portal
+- 48-hour response time
+- Escalation mechanism
+- Feedback system
+
+## Review and Updates
+This policy is reviewed:
+- Quarterly for effectiveness
+- Annually for comprehensive update
+- As needed for regulatory changes
+
+---
+Effective Date: January 20, 2024
+Version: 1.5
+Authority: Traffic Management Department
+
+================================================================================
+
+POLICY 3
+ID: 3
+TITLE: Road Safety and Maintenance Guidelines
+DEPARTMENT_ID: 1
+CREATED_AT: 2024-02-01T09:15:00.000Z
+FILE_URL: https://storage.azure.com/policies/road-safety-guidelines.pdf
+SIMILARITY_SCORE: 0.8234
+METADATA: {"category":"road_safety","priority":"high","maintenance_schedule":"quarterly"}
+CONTENT:
+# Road Safety and Maintenance Guidelines
+
+## Purpose
+To establish comprehensive guidelines for maintaining road safety standards and conducting regular maintenance activities.
+
+## Road Safety Standards
+
+### Surface Quality
+- Smooth surface without potholes
+- Proper drainage systems
+- Anti-skid surface in critical areas
+- Regular inspection and repair
+
+### Signage Requirements
+- Clear and visible traffic signs
+- Reflective materials for night visibility
+- Multilingual signage where applicable
+- Regular cleaning and maintenance
+
+### Road Markings
+- Lane markings clearly visible
+- Zebra crossings properly marked
+- Stop lines at intersections
+- Directional arrows and symbols
+
+### Lighting Standards
+- Adequate street lighting
+- LED lights for energy efficiency
+- Backup power systems
+- Regular bulb replacement
+
+## Maintenance Schedule
+
+### Daily Activities
+- Visual inspection of major roads
+- Clearing of debris and obstacles
+- Emergency pothole repairs
+- Traffic signal functionality checks
+
+### Weekly Activities
+- Detailed inspection of all roads
+- Cleaning of drainage systems
+- Signage cleaning and repair
+- Road marking touch-ups
+
+### Monthly Activities
+- Comprehensive road assessment
+- Vegetation control
+- Street light maintenance
+- Traffic signal calibration
+
+### Quarterly Activities
+- Major repair works
+- Resurfacing of damaged sections
+- Drainage system overhaul
+- Complete signage audit
+
+### Annual Activities
+- Full road network assessment
+- Major infrastructure upgrades
+- Technology system updates
+- Policy review and updates
+
+## Emergency Response
+
+### Incident Types
+- Accidents
+- Natural disasters
+- Infrastructure failures
+- Hazardous material spills
+
+### Response Protocol
+1. Immediate notification to control room
+2. Dispatch emergency response team
+3. Secure the area
+4. Provide necessary assistance
+5. Document incident details
+6. Initiate repair/cleanup
+7. File incident report
+
+### Response Time Targets
+- Critical incidents: 15 minutes
+- High priority: 30 minutes
+- Medium priority: 2 hours
+- Low priority: 24 hours
+
+## Quality Control
+
+### Inspection Standards
+- Regular quality audits
+- Third-party assessments
+- Citizen feedback integration
+- Performance metrics tracking
+
+### Documentation
+- Maintenance logs
+- Inspection reports
+- Repair records
+- Cost tracking
+
+## Contractor Management
+
+### Selection Criteria
+- Technical capability
+- Past performance
+- Financial stability
+- Safety record
+
+### Contract Terms
+- Clear scope of work
+- Quality standards
+- Timeline commitments
+- Penalty clauses
+
+### Monitoring
+- Regular site inspections
+- Progress tracking
+- Quality verification
+- Payment linked to milestones
+
+## Budget Allocation
+
+### Priority Areas
+1. Emergency repairs: 30%
+2. Preventive maintenance: 40%
+3. Upgrades and improvements: 20%
+4. Technology and equipment: 10%
+
+### Cost Optimization
+- Bulk procurement
+- Long-term contracts
+- Technology adoption
+- Preventive maintenance focus
+
+## Citizen Engagement
+
+### Reporting Mechanisms
+- Mobile app for complaints
+- Helpline number
+- Email support
+- Social media channels
+
+### Feedback System
+- Regular surveys
+- Public consultations
+- Suggestion box
+- Community meetings
+
+### Transparency
+- Public dashboard for maintenance status
+- Budget utilization reports
+- Performance metrics publication
+- Regular updates on projects
+
+## Safety Training
+
+### Staff Training
+- Safety protocols
+- Equipment operation
+- Emergency response
+- Customer service
+
+### Contractor Training
+- Site safety requirements
+- Quality standards
+- Reporting procedures
+- Compliance requirements
+
+## Environmental Considerations
+
+### Sustainable Practices
+- Use of recycled materials
+- Eco-friendly construction methods
+- Waste management
+- Noise pollution control
+
+### Green Infrastructure
+- Tree plantation along roads
+- Rain water harvesting
+- Solar-powered lights
+- Permeable pavements
+
+## Performance Metrics
+
+### Key Indicators
+- Road condition index
+- Maintenance response time
+- Citizen satisfaction score
+- Budget utilization rate
+- Accident reduction rate
+
+### Reporting
+- Monthly performance reports
+- Quarterly reviews
+- Annual comprehensive assessment
+- Public disclosure
+
+## Compliance and Audit
+
+### Internal Audits
+- Monthly compliance checks
+- Quality audits
+- Financial audits
+- Safety audits
+
+### External Audits
+- Annual third-party audit
+- Regulatory compliance verification
+- ISO certification maintenance
+- Public audit participation
+
+---
+Document Control
+Version: 3.0
+Last Updated: February 1, 2024
+Next Review: May 1, 2024
+Approved By: Chief Engineer, Road Safety Division
+
+================================================================================
+
+POLICY 4
+ID: 4
+TITLE: Public Transport Integration Policy
+DEPARTMENT_ID: 1
+CREATED_AT: 2024-02-10T11:20:00.000Z
+FILE_URL: https://storage.azure.com/policies/public-transport-policy.pdf
+SIMILARITY_SCORE: 0.7654
+METADATA: {"category":"public_transport","integration_level":"high","stakeholders":["bus_dept","metro","auto_union"]}
+CONTENT:
+# Public Transport Integration Policy
+
+## Vision
+To create a seamless, efficient, and citizen-friendly integrated public transport system.
+
+## Integration Framework
+
+### Multi-Modal Connectivity
+- Bus-Metro integration
+- Auto-rickshaw last-mile connectivity
+- Bicycle sharing integration
+- Pedestrian-friendly infrastructure
+
+### Common Ticketing System
+- Single card for all modes
+- Mobile app integration
+- Contactless payment
+- Automatic fare calculation
+
+### Information Systems
+- Real-time tracking
+- Unified mobile app
+- Digital displays at stops
+- SMS/WhatsApp updates
+
+## Bus Services
+
+### Route Planning
+- Coverage of all major areas
+- Frequency based on demand
+- Express and local services
+- Night bus services
+
+### Bus Stop Standards
+- Sheltered waiting areas
+- Seating arrangements
+- Route information displays
+- Safety features
+
+### Fleet Management
+- Regular maintenance schedule
+- GPS tracking
+- Fuel efficiency monitoring
+- Cleanliness standards
+
+## Metro Integration
+
+### Station Connectivity
+- Bus stops near metro stations
+- Auto stands at metro exits
+- Bicycle parking facilities
+- Pedestrian walkways
+
+### Transfer Facilities
+- Covered walkways
+- Escalators and elevators
+- Clear signage
+- Information kiosks
+
+## Auto-Rickshaw Services
+
+### Regulation
+- Meter usage mandatory
+- Fare chart display
+- Driver identification
+- Complaint mechanism
+
+### Stands and Parking
+- Designated auto stands
+- Queue management
+- Waiting area facilities
+- Information boards
+
+## Bicycle Sharing
+
+### Station Network
+- Stations every 500 meters
+- Docking facilities
+- Maintenance centers
+- Mobile app booking
+
+### Pricing
+- First 30 minutes free
+- Hourly charges thereafter
+- Monthly subscriptions
+- Student discounts
+
+## Pedestrian Infrastructure
+
+### Footpath Standards
+- Minimum width: 2 meters
+- Smooth surface
+- Proper lighting
+- Obstacle-free
+
+### Crossings
+- Zebra crossings at regular intervals
+- Pedestrian signals
+- Foot over-bridges where needed
+- Underpasses for highways
+
+## Accessibility
+
+### Disabled-Friendly Features
+- Low-floor buses
+- Ramps at stations
+- Audio announcements
+- Braille signage
+- Reserved seating
+
+### Senior Citizens
+- Priority seating
+- Assistance at stations
+- Concessional fares
+- Dedicated helpline
+
+## Technology Integration
+
+### Smart Systems
+- Intelligent traffic management
+- Predictive maintenance
+- Demand forecasting
+- Route optimization
+
+### Mobile Application
+- Journey planning
+- Real-time tracking
+- Ticket booking
+- Feedback system
+
+## Safety and Security
+
+### Surveillance
+- CCTV in buses and stations
+- Emergency buttons
+- Control room monitoring
+- Quick response teams
+
+### Safety Measures
+- Fire safety equipment
+- First aid facilities
+- Emergency exits
+- Regular safety drills
+
+## Environmental Sustainability
+
+### Green Fleet
+- Electric buses
+- CNG vehicles
+- Emission standards
+- Regular pollution checks
+
+### Carbon Footprint
+- Monitoring and reporting
+- Reduction targets
+- Offset programs
+- Public awareness
+
+## Stakeholder Coordination
+
+### Regular Meetings
+- Monthly coordination meetings
+- Quarterly reviews
+- Annual planning sessions
+- Emergency protocols
+
+### Information Sharing
+- Shared databases
+- Common communication platform
+- Joint training programs
+- Collaborative problem-solving
+
+## Performance Monitoring
+
+### Key Metrics
+- Ridership numbers
+- On-time performance
+- Customer satisfaction
+- Revenue collection
+- Complaint resolution time
+
+### Reporting
+- Daily operational reports
+- Weekly performance summaries
+- Monthly analysis
+- Annual comprehensive review
+
+## Citizen Engagement
+
+### Feedback Channels
+- Mobile app feedback
+- Helpline: 1800-XXX-ZZZZ
+- Email: transport@city.gov.in
+- Social media
+
+### Public Consultations
+- Route planning inputs
+- Service improvement suggestions
+- Fare structure discussions
+- Infrastructure development
+
+## Financial Management
+
+### Revenue Sources
+- Ticket sales
+- Advertising
+- Government subsidies
+- Corporate partnerships
+
+### Cost Management
+- Operational efficiency
+- Bulk procurement
+- Energy conservation
+- Preventive maintenance
+
+## Future Expansion
+
+### Planned Developments
+- New metro lines
+- Bus rapid transit corridors
+- Electric vehicle charging stations
+- Smart bus stops
+
+### Timeline
+- Phase 1: 2024-2025
+- Phase 2: 2025-2027
+- Phase 3: 2027-2030
+
+---
+Policy Details
+Version: 2.0
+Effective Date: February 10, 2024
+Review Cycle: Annual
+Coordinating Authority: Transport Integration Cell
+
+================================================================================
+
+POLICY 5
+ID: 5
+TITLE: Traffic Signal Management and Optimization
+DEPARTMENT_ID: 1
+CREATED_AT: 2024-02-15T16:30:00.000Z
+FILE_URL: N/A
+SIMILARITY_SCORE: 0.8012
+METADATA: {"category":"traffic_signals","automation_level":"high","ai_enabled":true}
+CONTENT:
+# Traffic Signal Management and Optimization
+
+## Overview
+Comprehensive policy for managing, maintaining, and optimizing traffic signal systems across the city.
+
+## Signal Infrastructure
+
+### Types of Signals
+- Fixed-time signals
+- Vehicle-actuated signals
+- Pedestrian-actuated signals
+- Emergency vehicle priority signals
+
+### Components
+- Signal heads (LED)
+- Controllers
+- Detectors and sensors
+- Communication systems
+- Backup power supply
+
+## Signal Timing
+
+### Peak Hours
+- Morning: 7 AM - 10 AM
+- Evening: 5 PM - 8 PM
+- Adjusted timing for traffic flow
+- Coordination between signals
+
+### Off-Peak Hours
+- Reduced cycle times
+- Flashing yellow where appropriate
+- Energy conservation mode
+- Maintenance windows
+
+### Special Events
+- Manual override capability
+- Pre-programmed event plans
+- Real-time adjustments
+- Coordination with police
+
+## Intelligent Traffic Management
+
+### AI-Based Optimization
+- Real-time traffic analysis
+- Adaptive signal timing
+- Congestion prediction
+- Automatic adjustments
+
+### Data Collection
+- Vehicle count and speed
+- Queue length monitoring
+- Travel time measurement
+- Incident detection
+
+### Integration
+- Central control system
+- Mobile app integration
+- Public information displays
+- Emergency services coordination
+
+## Maintenance
+
+### Preventive Maintenance
+- Weekly visual inspections
+- Monthly functional tests
+- Quarterly cleaning
+- Annual comprehensive service
+
+### Corrective Maintenance
+- 24/7 fault monitoring
+- Rapid response team
+- Spare parts inventory
+- Contractor support
+
+### Documentation
+- Maintenance logs
+- Fault reports
+- Repair records
+- Performance data
+
+## Emergency Protocols
+
+### Signal Failure
+- Automatic notification
+- Manual traffic control deployment
+- Temporary signage
+- Repair prioritization
+
+### Power Outage
+- UPS backup activation
+- Generator deployment
+- Traffic police notification
+- Public announcements
+
+### Natural Disasters
+- Pre-storm preparations
+- Post-disaster assessment
+- Rapid restoration
+- Alternative traffic management
+
+## Pedestrian Safety
+
+### Crossing Time
+- Adequate crossing time
+- Countdown timers
+- Audio signals for visually impaired
+- Push-button activation
+
+### Safety Features
+- Pedestrian refuge islands
+- Clear markings
+- Adequate lighting
+- CCTV monitoring
+
+## Coordination
+
+### Signal Synchronization
+- Green wave on major corridors
+- Minimized stops
+- Reduced travel time
+- Fuel efficiency
+
+### Network Optimization
+- Computer modeling
+- Traffic flow analysis
+- Bottleneck identification
+- Continuous improvement
+
+## Technology Upgrades
+
+### Current Systems
+- LED signal heads
+- Microprocessor controllers
+- Inductive loop detectors
+- Fiber optic communication
+
+### Planned Upgrades
+- AI-powered controllers
+- Video detection systems
+- 5G communication
+- Cloud-based management
+
+## Performance Metrics
+
+### Key Indicators
+- Average delay per vehicle
+- Queue length
+- Travel time
+- Fuel consumption
+- Accident rates at signals
+
+### Targets
+- Reduce average delay by 20%
+- Minimize queue lengths
+- Improve travel time reliability
+- Zero signal-related accidents
+
+## Public Awareness
+
+### Education Campaigns
+- Signal compliance importance
+- Pedestrian safety
+- Emergency vehicle priority
+- New technology features
+
+### Communication
+- Website updates
+- Mobile app notifications
+- Social media
+- Local media
+
+## Compliance and Standards
+
+### National Standards
+- IRC guidelines
+- BIS specifications
+- MORT&H standards
+- Environmental norms
+
+### Quality Assurance
+- Regular audits
+- Third-party inspections
+- Performance reviews
+- Continuous improvement
+
+## Budget and Resources
+
+### Annual Budget
+- Equipment: 40%
+- Maintenance: 30%
+- Technology upgrades: 20%
+- Training and development: 10%
+
+### Resource Allocation
+- Priority to high-traffic areas
+- Equitable distribution
+- Emergency reserves
+- Innovation fund
+
+## Training
+
+### Staff Training
+- Signal technology
+- Maintenance procedures
+- Emergency response
+- Customer service
+
+### Certification
+- Technical certification programs
+- Safety training
+- Software operation
+- Quality standards
+
+## Future Vision
+
+### Smart City Integration
+- IoT-enabled signals
+- Connected vehicles
+- Autonomous vehicle support
+- Integrated mobility platform
+
+### Sustainability
+- Solar-powered signals
+- Energy-efficient LEDs
+- Reduced carbon footprint
+- Green infrastructure
+
+---
+Document Information
+Version: 1.8
+Last Updated: February 15, 2024
+Next Review: May 15, 2024
+Responsible Officer: Chief Traffic Engineer
+
+================================================================================
+
+END OF RAW DATA EXAMPLE
+
+Total Policies: 5
+Total Characters: ~25,000
+Format: Plain text, no HTML, no markdown rendering
+All data extracted exactly as stored in database
+No modifications, no formatting, no alterations
+
+================================================================================

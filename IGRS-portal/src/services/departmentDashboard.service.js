@@ -400,6 +400,17 @@ class DepartmentDashboardService {
     if (!response.ok) throw new Error('Failed to fetch progress report');
     return await response.json();
   }
+
+  async getDepartmentPolicies(depId, token) {
+    const response = await fetch(`${API_URL}/api/department-dashboard/${depId}/policies`, {
+      headers: { 
+        'Authorization': `Bearer ${token}`, 
+        'Content-Type': 'application/json' 
+      }
+    });
+    if (!response.ok) throw new Error('Failed to fetch department policies');
+    return await response.json();
+  }
 }
 
 export default new DepartmentDashboardService();

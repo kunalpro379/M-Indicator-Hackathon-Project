@@ -2038,4 +2038,42 @@ router.get('/:depId/audit-logs', authenticate, verifyDepartmentAccess, async (re
   }
 });
 
+// Department policies
+router.get('/:depId/policies', authenticate, verifyDepartmentAccess, async (req, res) => {
+  try {
+    const { depId } = req.params;
+    
+    console.log('🔍 Fetching policies for department ID:', depId);
+    
+    const result = await pool.query(
+      `SELECT policies FROM departments WHERE id = $1`,
+      [depId]
+    );
+    
+    console.log('📊 Query result:', {
+      rowCount: result.rows.length,
+      hasPolicies: result.rows[0]?.policies ? 'yes' : 'no',
+      policyLength: result.rows[0]?.policies?.length || 0
+    });
+    
+    if (result.rows.length === 0) {
+      console.warn('⚠️ Department not found:', depId);
+      return res.status(404).json({ error: 'Department not found' });
+    }
+    
+    const policies = result.rows[0].policies || '';
+    console.log('✅ Returning policies:', policies ? `${policies.length} characters` : 'empty');
+    
+    res.json({ 
+      success: true, 
+      data: { 
+        policies: policies
+      } 
+    });
+  } catch (error) {
+    console.error('❌ Error fetching department policies:', error);
+    res.status(500).json({ error: 'Failed to fetch department policies' });
+  }
+});
+
 export default router;

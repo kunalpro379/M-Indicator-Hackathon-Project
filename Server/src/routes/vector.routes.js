@@ -13,6 +13,12 @@ router.post('/relevant-policies', vectorController.findRelevantPolicies);
 router.post('/relevant-faqs', vectorController.findRelevantFAQs);
 router.post('/search', vectorController.searchGrievances);
 
+// REACT Agent endpoint for guaranteed policy retrieval
+router.get('/policies/department/:departmentId/react',
+  authorize('admin', 'department_head', 'department_officer', 'citizen'),
+  vectorController.getDepartmentPoliciesReact
+);
+
 // Department analytics
 router.get('/clusters/:departmentId', 
   authorize('admin', 'department_head', 'department_officer'),

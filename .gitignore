@@ -4,7 +4,10 @@
 !.env.example
 
 # Node modules
-node_modules/
+
+Server/node_modules/
+IGRS-portal/node_modules/
+DB/node_modules/
 
 # WhatsApp session files (contain secrets in crash dumps)
 .wwebjs_auth/

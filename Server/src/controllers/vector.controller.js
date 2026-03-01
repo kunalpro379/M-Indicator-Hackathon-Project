@@ -1,4 +1,5 @@
 import { vectorService } from '../services/vector.service.js';
+import reactPolicyService from '../services/react-policy.service.js';
 
 export const findSimilarGrievances = async (req, res) => {
   try {
@@ -42,17 +43,36 @@ export const findSimilarResolved = async (req, res) => {
 
 export const findRelevantPolicies = async (req, res) => {
   try {
-    const { embedding, department_id, limit = 5 } = req.body;
+    const { embedding, department_id, limit = 5, use_react = false } = req.body;
 
     if (!embedding || !Array.isArray(embedding)) {
       return res.status(400).json({ error: 'Valid embedding array required' });
     }
 
+    // Use REACT agent if requested for guaranteed results
+    if (use_react) {
+      const result = await reactPolicyService.fetchPoliciesWithRetry(
+        department_id,
+        embedding,
+        null,
+        { maxAttempts: 10, retryDelay: 2.0 }
+      );
+      
+      return res.json({
+        count: result.policies.length,
+        policies: result.policies.slice(0, limit),
+        metadata: result.metadata,
+        source: 'react_agent',
+      });
+    }
+
+    // Standard query
     const policies = await vectorService.findRelevantPolicies(embedding, department_id, limit);
 
     res.json({
       count: policies.length,
       policies,
+      source: 'standard',
     });
   } catch (error) {
     console.error('Find relevant policies error:', error);
@@ -225,5 +245,51 @@ export const batchUpdateEmbeddings = async (req, res) => {
   } catch (error) {
     console.error('Batch update embeddings error:', error);
     res.status(500).json({ error: 'Failed to update embeddings' });
+  }
+};
+
+/**
+ * Get department policies with REACT agent (guaranteed results)
+ */
+export const getDepartmentPoliciesReact = async (req, res) => {
+  try {
+    const { departmentId } = req.params;
+    const { max_attempts = 10, retry_delay = 2.0 } = req.query;
+
+    console.log(`🤖 Using REACT agent for department ${departmentId}`);
+
+    // Try REACT agent first
+    const agentHealthy = await reactPolicyService.checkAgentHealth();
+    
+    if (agentHealthy) {
+      const result = await reactPolicyService.getDepartmentPoliciesGuaranteed(
+        departmentId,
+        { maxAttempts: parseInt(max_attempts), retryDelay: parseFloat(retry_delay) }
+      );
+      
+      return res.json({
+        ...result,
+        source: 'react_agent',
+      });
+    }
+
+    // Fallback to direct database with retry
+    console.log('⚠️  REACT agent unavailable, using direct database with retry');
+    const result = await reactPolicyService.fetchPoliciesDirectWithRetry(
+      departmentId,
+      parseInt(max_attempts),
+      parseFloat(retry_delay) * 1000
+    );
+
+    res.json({
+      ...result,
+      source: 'direct_with_retry',
+    });
+  } catch (error) {
+    console.error('Get department policies REACT error:', error);
+    res.status(500).json({ 
+      error: 'Failed to get department policies',
+      details: error.message,
+    });
   }
 };

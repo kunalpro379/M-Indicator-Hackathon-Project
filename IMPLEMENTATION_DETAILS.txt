@@ -1,0 +1,456 @@
+================================================================================
+REACT AGENT RELOAD BUTTON IMPLEMENTATION - COMPLETE DETAILS
+================================================================================
+
+This document contains ALL the code changes made to implement the Reload button
+that triggers the REACT agent and displays raw, unformatted policy data.
+
+================================================================================
+FILE 1: IGRS-portal/src/services/reactPolicyService.js (NEW FILE)
+================================================================================
+
+import api from './api';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+export const reactPolicyService = {
+  /**
+   * Fetch department policies using REACT agent (guaranteed results)
+   * Returns raw text data without any modifications
+   */
+  async fetchPoliciesWithReactAgent(departmentId, options = {}) {
+    try {
+      const {
+        maxAttempts = 10,
+        retryDelay = 2.0,
+      } = options;
+
+      const response = await api.get(
+        `/api/vector/policies/department/${departmentId}/react`,
+        {
+          params: {
+            max_attempts: maxAttempts,
+            retry_delay: retryDelay,
+          },
+          timeout: maxAttempts * retryDelay * 1000 + 30000,
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error('REACT agent error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Extract all policy text data in raw format
+   */
+  extractRawPolicyText(policies) {
+    if (!policies || policies.length === 0) {
+      return 'NO POLICIES FOUND';
+    }
+
+    let rawText = '';
+    
+    policies.forEach((policy, index) => {
+      rawText += `POLICY ${index + 1}\n`;
+      rawText += `ID: ${policy.id}\n`;
+      rawText += `TITLE: ${policy.title}\n`;
+      rawText += `DEPARTMENT_ID: ${policy.department_id}\n`;
+      rawText += `CREATED_AT: ${policy.created_at}\n`;
+      rawText += `FILE_URL: ${policy.file_url || 'N/A'}\n`;
+      rawText += `SIMILARITY_SCORE: ${policy.similarity_score || 'N/A'}\n`;
+      rawText += `METADATA: ${JSON.stringify(policy.metadata || {})}\n`;
+      rawText += `CONTENT:\n${policy.content}\n`;
+      rawText += `\n${'='.repeat(80)}\n\n`;
+    });
+
+    return rawText;
+  },
+
+  /**
+   * Check if REACT agent is available
+   */
+  async checkAgentHealth() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/health`, {
+        timeout: 5000,
+      });
+      const data = await response.json();
+      return data.status === 'healthy';
+    } catch (error) {
+      return false;
+    }
+  },
+};
+
+export default reactPolicyService;
+
+================================================================================
+FILE 2: IGRS-portal/src/pages/department/Dashboard.jsx (MODIFICATIONS)
+================================================================================
+
+CHANGE 1: IMPORT STATEMENTS
+----------------------------
+ADDED: RefreshCw to lucide-react imports
+ADDED: import reactPolicyService from '../../services/reactPolicyService';
+
+BEFORE:
+import {
+  LayoutDashboard, FileText, TrendingUp, Users, AlertTriangle, Activity,
+  Clock, CheckCircle, Briefcase, MapPin, ChevronRight, Loader, DollarSign, BarChart3,
+  Eye, Pencil, Search, X, MessageSquare, Wrench, BookOpen, ScrollText, UserPlus, AlertCircle as AlertCircleIcon, Link as LinkIcon,
+  Map as MapIcon, Maximize2, Minimize2, Calendar, Building2, Sparkles, ExternalLink, Image as ImageIcon, Check, XCircle
+} from 'lucide-react';
+import departmentDashboardService from '../../services/departmentDashboard.service';
+
+AFTER:
+import {
+  LayoutDashboard, FileText, TrendingUp, Users, AlertTriangle, Activity,
+  Clock, CheckCircle, Briefcase, MapPin, ChevronRight, Loader, DollarSign, BarChart3,
+  Eye, Pencil, Search, X, MessageSquare, Wrench, BookOpen, ScrollText, UserPlus, AlertCircle as AlertCircleIcon, Link as LinkIcon,
+  Map as MapIcon, Maximize2, Minimize2, Calendar, Building2, Sparkles, ExternalLink, Image as ImageIcon, Check, XCircle, RefreshCw
+} from 'lucide-react';
+import departmentDashboardService from '../../services/departmentDashboard.service';
+import reactPolicyService from '../../services/reactPolicyService';
+
+================================================================================
+
+CHANGE 2: STATE VARIABLES
+--------------------------
+ADDED: New state variables for REACT agent functionality
+
+BEFORE:
+  const [policies, setPolicies] = useState('');
+  const [policiesLoading, setPoliciesLoading] = useState(false);
+  const [citizenFeedbackData, setCitizenFeedbackData] = useState({ data: [], summary: {} });
+
+AFTER:
+  const [policies, setPolicies] = useState('');
+  const [policiesLoading, setPoliciesLoading] = useState(false);
+  const [reactAgentLoading, setReactAgentLoading] = useState(false);
+  const [rawPolicyData, setRawPolicyData] = useState('');
+  const [showRawData, setShowRawData] = useState(false);
+  const [reactAgentMetadata, setReactAgentMetadata] = useState(null);
+  const [citizenFeedbackData, setCitizenFeedbackData] = useState({ data: [], summary: {} });
+
+================================================================================
+
+CHANGE 3: NEW FUNCTION - handleReactAgentReload
+------------------------------------------------
+ADDED: Complete function to handle REACT agent reload
+
+LOCATION: After loadMapGrievances function, before tabs definition
+
+COMPLETE FUNCTION CODE:
+
+  const handleReactAgentReload = async () => {
+    try {
+      setReactAgentLoading(true);
+      setRawPolicyData('');
+      setReactAgentMetadata(null);
+      
+      console.log('🤖 Triggering REACT Agent for department:', depId);
+      
+      const result = await reactPolicyService.fetchPoliciesWithReactAgent(depId, {
+        maxAttempts: 10,
+        retryDelay: 2.0,
+      });
+      
+      console.log('✅ REACT Agent Result:', result);
+      
+      if (result.success && result.policies && result.policies.length > 0) {
+        const rawText = reactPolicyService.extractRawPolicyText(result.policies);
+        setRawPolicyData(rawText);
+        setReactAgentMetadata(result.metadata);
+        setShowRawData(true);
+        
+        if (result.policies[0] && result.policies[0].content) {
+          setPolicies(result.policies[0].content);
+        }
+      } else {
+        setRawPolicyData('NO POLICIES FOUND AFTER ALL ATTEMPTS');
+        setReactAgentMetadata(result.metadata);
+        setShowRawData(true);
+      }
+    } catch (error) {
+      console.error('❌ REACT Agent Error:', error);
+      setRawPolicyData(`ERROR: ${error.message}\n\nFailed to fetch policies using REACT agent.`);
+      setShowRawData(true);
+    } finally {
+      setReactAgentLoading(false);
+    }
+  };
+
+================================================================================
+
+CHANGE 4: POLICIES RENDERING SECTION - HEADER UPDATE
+-----------------------------------------------------
+MODIFIED: Added Reload button and metadata display in the policies section
+
+LOCATION: In the renderPoliciesTab function, around line 3848
+
+BEFORE:
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h2 className="text-3xl font-bold text-stone-900 uppercase tracking-wide">Department Policies & Guidelines</h2>
+            <p className="text-stone-600 mt-1">Official documentation and standard operating procedures</p>
+          </div>
+          <div className="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#C5A028] text-white rounded-lg shadow-md">
+            <FileText className="w-5 h-5" />
+            <span className="font-semibold">Official Document</span>
+          </div>
+        </div>
+        
+        {/* Main Content Card */}
+        <div className="bg-white rounded-2xl border-2 border-[#D4AF37] shadow-2xl overflow-hidden">
+
+AFTER:
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h2 className="text-3xl font-bold text-stone-900 uppercase tracking-wide">Department Policies & Guidelines</h2>
+            <p className="text-stone-600 mt-1">Official documentation and standard operating procedures</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleReactAgentReload}
+              disabled={reactAgentLoading}
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all shadow-md ${
+                reactAgentLoading
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white'
+              }`}
+            >
+              <RefreshCw className={`w-5 h-5 ${reactAgentLoading ? 'animate-spin' : ''}`} />
+              {reactAgentLoading ? 'Loading...' : 'Reload with REACT Agent'}
+            </button>
+            <div className="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#C5A028] text-white rounded-lg shadow-md">
+              <FileText className="w-5 h-5" />
+              <span className="font-semibold">Official Document</span>
+            </div>
+          </div>
+        </div>
+
+        {/* REACT Agent Metadata */}
+        {reactAgentMetadata && (
+          <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-blue-600 rounded-lg">
+                <Activity className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-bold text-blue-900 mb-2">REACT Agent Execution Details</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="text-blue-600 font-semibold">Attempts:</span>
+                    <span className="ml-2 text-blue-900">{reactAgentMetadata.attempts}</span>
+                  </div>
+                  <div>
+                    <span className="text-blue-600 font-semibold">Policies Found:</span>
+                    <span className="ml-2 text-blue-900">{reactAgentMetadata.total_policies_found}</span>
+                  </div>
+                  <div>
+                    <span className="text-blue-600 font-semibold">Time:</span>
+                    <span className="ml-2 text-blue-900">{reactAgentMetadata.elapsed_time_seconds}s</span>
+                  </div>
+                  <div>
+                    <span className="text-blue-600 font-semibold">Department:</span>
+                    <span className="ml-2 text-blue-900">{reactAgentMetadata.department_id || depId}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Raw Data Toggle */}
+        {rawPolicyData && (
+          <div className="flex items-center justify-between bg-gray-100 border border-gray-300 rounded-lg p-3">
+            <span className="text-gray-700 font-semibold">Raw Policy Data (Unformatted)</span>
+            <button
+              onClick={() => setShowRawData(!showRawData)}
+              className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors"
+            >
+              {showRawData ? 'Hide Raw Data' : 'Show Raw Data'}
+            </button>
+          </div>
+        )}
+
+        {/* Raw Data Display */}
+        {showRawData && rawPolicyData && (
+          <div className="bg-black text-green-400 rounded-xl p-6 font-mono text-sm overflow-x-auto shadow-2xl border-2 border-green-500">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-green-300 font-bold">RAW POLICY DATA - UNFORMATTED TEXT</span>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(rawPolicyData);
+                  alert('Raw data copied to clipboard!');
+                }}
+                className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"
+              >
+                Copy All
+              </button>
+            </div>
+            <pre className="whitespace-pre-wrap break-words">{rawPolicyData}</pre>
+          </div>
+        )}
+        
+        {/* Main Content Card */}
+        <div className="bg-white rounded-2xl border-2 border-[#D4AF37] shadow-2xl overflow-hidden">
+
+================================================================================
+SUMMARY OF CHANGES
+================================================================================
+
+1. NEW FILE: reactPolicyService.js
+   - Service to communicate with REACT agent API
+   - Function to extract raw policy text without formatting
+   - Health check for REACT agent availability
+
+2. MODIFIED FILE: Dashboard.jsx
+   - Added RefreshCw icon import
+   - Added reactPolicyService import
+   - Added 4 new state variables:
+     * reactAgentLoading
+     * rawPolicyData
+     * showRawData
+     * reactAgentMetadata
+   - Added handleReactAgentReload function
+   - Modified policies section header to include:
+     * Reload button with loading state
+     * REACT agent metadata display
+     * Raw data toggle button
+     * Raw data display section with copy functionality
+
+================================================================================
+HOW IT WORKS
+================================================================================
+
+1. USER CLICKS "Reload with REACT Agent" BUTTON
+   - Button is in the policies tab header
+   - Shows loading spinner while processing
+
+2. REACT AGENT IS TRIGGERED
+   - Calls /api/vector/policies/department/:id/react endpoint
+   - Agent tries up to 10 times with 2-second delays
+   - Uses adaptive search strategies
+
+3. RAW DATA IS EXTRACTED
+   - All policy data extracted WITHOUT any formatting
+   - Includes: ID, title, department_id, created_at, file_url, similarity_score, metadata, content
+   - Each policy separated by 80 equal signs
+
+4. DATA IS DISPLAYED
+   - Metadata box shows: attempts, policies found, time taken, department ID
+   - Toggle button to show/hide raw data
+   - Raw data displayed in terminal-style black background with green text
+   - Copy button to copy all raw text to clipboard
+
+5. FORMATTED VIEW UPDATED
+   - First policy's content is also set to the formatted view
+   - User can see both raw and formatted versions
+
+================================================================================
+RAW DATA FORMAT EXAMPLE
+================================================================================
+
+POLICY 1
+ID: 123
+TITLE: Traffic Management Policy
+DEPARTMENT_ID: 1
+CREATED_AT: 2024-01-15T10:30:00Z
+FILE_URL: https://example.com/policy.pdf
+SIMILARITY_SCORE: 0.85
+METADATA: {"category":"traffic","version":"1.0"}
+CONTENT:
+This is the complete policy text without any formatting or modifications.
+All text is preserved exactly as stored in the database.
+Line breaks, spacing, and special characters are maintained.
+
+================================================================================
+
+POLICY 2
+ID: 124
+TITLE: Parking Regulations
+DEPARTMENT_ID: 1
+CREATED_AT: 2024-01-20T14:45:00Z
+FILE_URL: N/A
+SIMILARITY_SCORE: 0.78
+METADATA: {}
+CONTENT:
+Complete parking policy text here...
+
+================================================================================
+
+================================================================================
+TESTING INSTRUCTIONS
+================================================================================
+
+1. Start REACT Agent:
+   cd Agents/PolicyReactAgent
+   python api_integration.py
+
+2. Start Server:
+   cd Server
+   npm start
+
+3. Start Frontend:
+   cd IGRS-portal
+   npm run dev
+
+4. Navigate to Department Dashboard > Policies Tab
+
+5. Click "Reload with REACT Agent" button
+
+6. Observe:
+   - Loading spinner on button
+   - Metadata box appears with execution details
+   - Toggle button appears for raw data
+   - Click toggle to see raw unformatted text
+   - Click "Copy All" to copy raw data
+
+================================================================================
+API ENDPOINT USED
+================================================================================
+
+GET /api/vector/policies/department/:departmentId/react
+
+Query Parameters:
+- max_attempts: Number of retry attempts (default: 10)
+- retry_delay: Delay between retries in seconds (default: 2.0)
+
+Response Format:
+{
+  "success": true,
+  "policies": [
+    {
+      "id": 123,
+      "title": "Policy Title",
+      "content": "Full policy text...",
+      "department_id": 1,
+      "file_url": "https://...",
+      "metadata": {},
+      "created_at": "2024-01-15T10:30:00Z",
+      "similarity_score": 0.85
+    }
+  ],
+  "metadata": {
+    "attempts": 2,
+    "total_policies_found": 5,
+    "elapsed_time_seconds": 4.2,
+    "department_id": 1,
+    "thought_log": [...]
+  },
+  "source": "react_agent"
+}
+
+================================================================================
+END OF IMPLEMENTATION DETAILS
+================================================================================

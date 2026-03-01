@@ -98,6 +98,8 @@ const DepartmentDashboardNew = () => {
   const [escalationsLoading, setEscalationsLoading] = useState(false);
   const [progressReport, setProgressReport] = useState(null);
   const [progressReportLoading, setProgressReportLoading] = useState(false);
+  const [policies, setPolicies] = useState('');
+  const [policiesLoading, setPoliciesLoading] = useState(false);
   const [citizenFeedbackData, setCitizenFeedbackData] = useState({ data: [], summary: {} });
   const [citizenFeedbackLoading, setCitizenFeedbackLoading] = useState(false);
   const [predictiveMaintenanceList, setPredictiveMaintenanceList] = useState([]);
@@ -205,6 +207,29 @@ const DepartmentDashboardNew = () => {
   }, [activeTab, depId]);
   useEffect(() => {
     if (activeTab === 'audit-logs') loadAuditLogs();
+  }, [activeTab, depId]);
+  
+  useEffect(() => {
+    if (activeTab === 'policies') {
+      console.log('🔍 Loading policies for department:', depId);
+      setPoliciesLoading(true);
+      departmentDashboardService.getDepartmentPolicies(depId, localStorage.getItem('accessToken'))
+        .then(res => {
+          console.log('📄 Policies response:', res);
+          if (res.success && res.data) {
+            console.log('✅ Policies data:', res.data.policies ? `${res.data.policies.length} characters` : 'empty');
+            setPolicies(res.data.policies || '');
+          } else {
+            console.warn('⚠️ No policies in response');
+            setPolicies('');
+          }
+        })
+        .catch(err => {
+          console.error('❌ Error loading policies:', err);
+          setPolicies('');
+        })
+        .finally(() => setPoliciesLoading(false));
+    }
   }, [activeTab, depId]);
   
   useEffect(() => {
@@ -685,6 +710,7 @@ const DepartmentDashboardNew = () => {
     { id: 'knowledge-base', label: 'Knowledge Base', icon: BookOpen },
     { id: 'officers', label: 'Officers', icon: Users },
     { id: 'audit-logs', label: 'Audit Logs', icon: ScrollText },
+    { id: 'policies', label: 'Policies', icon: FileText },
   ];
   const resourceSubTabs = [
     { id: 'internal-team', label: 'Internal Team' },
@@ -3627,6 +3653,148 @@ const DepartmentDashboardNew = () => {
     );
   };
 
+  // Render Policies tab
+  const renderPolicies = () => {
+    if (policiesLoading) {
+      return (
+        <div className="flex items-center justify-center py-24 bg-white rounded-xl border border-stone-200">
+          <Loader className="w-10 h-10 animate-spin text-stone-500" />
+          <span className="ml-3 text-stone-600">Loading policies...</span>
+        </div>
+      );
+    }
+
+    if (!policies || policies.trim() === '') {
+      return (
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold text-stone-900 uppercase tracking-wide">Department Policies</h2>
+          <div className="bg-white rounded-xl border border-stone-200 shadow-md p-12 text-center">
+            <FileText className="w-16 h-16 text-stone-400 mx-auto mb-4" />
+            <p className="text-stone-600 text-lg">No policies available for this department</p>
+            <p className="text-stone-500 text-sm mt-2">Policies will be displayed here once they are added to the system</p>
+          </div>
+        </div>
+      );
+    }
+
+    // Parse markdown and render
+    const renderMarkdown = (markdown) => {
+      const lines = markdown.split('\n');
+      const elements = [];
+      let currentList = [];
+      let inCodeBlock = false;
+      let codeContent = [];
+
+      lines.forEach((line, idx) => {
+        // Code blocks
+        if (line.trim().startsWith('```')) {
+          if (inCodeBlock) {
+            elements.push(
+              <pre key={`code-${idx}`} className="bg-stone-100 p-4 rounded-lg overflow-x-auto my-4 border border-stone-300">
+                <code className="text-sm text-stone-800">{codeContent.join('\n')}</code>
+              </pre>
+            );
+            codeContent = [];
+          }
+          inCodeBlock = !inCodeBlock;
+          return;
+        }
+
+        if (inCodeBlock) {
+          codeContent.push(line);
+          return;
+        }
+
+        // Flush current list if we're not in a list item
+        if (!line.trim().startsWith('-') && !line.trim().startsWith('*') && currentList.length > 0) {
+          elements.push(
+            <ul key={`list-${idx}`} className="list-disc list-inside space-y-2 my-4 ml-4">
+              {currentList.map((item, i) => (
+                <li key={i} className="text-stone-700">{item}</li>
+              ))}
+            </ul>
+          );
+          currentList = [];
+        }
+
+        // Headers
+        if (line.startsWith('# ')) {
+          elements.push(<h1 key={idx} className="text-3xl font-bold text-stone-900 mt-8 mb-4">{line.substring(2)}</h1>);
+        } else if (line.startsWith('## ')) {
+          elements.push(<h2 key={idx} className="text-2xl font-bold text-stone-800 mt-6 mb-3">{line.substring(3)}</h2>);
+        } else if (line.startsWith('### ')) {
+          elements.push(<h3 key={idx} className="text-xl font-semibold text-stone-700 mt-4 mb-2">{line.substring(4)}</h3>);
+        }
+        // Horizontal rule
+        else if (line.trim() === '---') {
+          elements.push(<hr key={idx} className="my-6 border-t-2 border-stone-300" />);
+        }
+        // List items
+        else if (line.trim().startsWith('-') || line.trim().startsWith('*')) {
+          const content = line.trim().substring(1).trim();
+          // Check for italic (markdown format)
+          if (content.startsWith('*') && content.endsWith('*')) {
+            currentList.push(<em>{content.substring(1, content.length - 1)}</em>);
+          } else {
+            currentList.push(content);
+          }
+        }
+        // Regular paragraphs
+        else if (line.trim()) {
+          // Check for italic
+          if (line.trim().startsWith('*') && line.trim().endsWith('*')) {
+            elements.push(<p key={idx} className="text-stone-600 my-2 italic">{line.trim().substring(1, line.trim().length - 1)}</p>);
+          } else {
+            elements.push(<p key={idx} className="text-stone-700 my-2 leading-relaxed">{line}</p>);
+          }
+        }
+      });
+
+      // Flush any remaining list
+      if (currentList.length > 0) {
+        elements.push(
+          <ul key="list-final" className="list-disc list-inside space-y-2 my-4 ml-4">
+            {currentList.map((item, i) => (
+              <li key={i} className="text-stone-700">{item}</li>
+            ))}
+          </ul>
+        );
+      }
+
+      return elements;
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-stone-900 uppercase tracking-wide">Department Policies & Guidelines</h2>
+          <div className="flex items-center gap-2 text-sm text-stone-600">
+            <FileText className="w-4 h-4" />
+            <span>Official Department Documentation</span>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-xl border-2 border-[#D4AF37] shadow-lg overflow-hidden">
+          <div className="bg-gradient-to-r from-stone-800 to-stone-900 text-white p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-[#D4AF37] rounded-lg">
+                <ScrollText className="w-6 h-6 text-black" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold">Policy Document</h3>
+                <p className="text-sm text-stone-300">Official guidelines and regulations</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="p-8 prose prose-stone max-w-none">
+            {renderMarkdown(policies)}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Fetch progress report
   const fetchProgressReport = async () => {
     setProgressReportLoading(true);
@@ -3847,6 +4015,7 @@ const DepartmentDashboardNew = () => {
         {activeTab === 'knowledge-base' && renderKnowledgeBase()}
         {activeTab === 'officers' && renderOfficers()}
         {activeTab === 'audit-logs' && renderAuditLogs()}
+        {activeTab === 'policies' && renderPolicies()}
       </div>
 
       {/* Edit Field Worker Modal */}

@@ -24,6 +24,7 @@
     "@azure/storage-blob": "^12.17.0",
     "@azure/storage-queue": "^12.16.0",
     "@google/generative-ai": "^0.24.1",
+    "@pinecone-database/pinecone": "^7.1.0",
     "axios": "^1.13.5",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
