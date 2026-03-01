@@ -96,8 +96,6 @@ const DepartmentDashboardNew = () => {
   const [activeResourceTab, setActiveResourceTab] = useState('internal-team');
   const [escalationsData, setEscalationsData] = useState({ escalations: [], repeatPatterns: [] });
   const [escalationsLoading, setEscalationsLoading] = useState(false);
-  const [aiInsightsList, setAiInsightsList] = useState([]);
-  const [aiInsightsLoading, setAiInsightsLoading] = useState(false);
   const [progressReport, setProgressReport] = useState(null);
   const [progressReportLoading, setProgressReportLoading] = useState(false);
   const [citizenFeedbackData, setCitizenFeedbackData] = useState({ data: [], summary: {} });
@@ -197,9 +195,6 @@ const DepartmentDashboardNew = () => {
     if (activeTab === 'escalations') loadEscalations();
   }, [activeTab, depId]);
   useEffect(() => {
-    if (activeTab === 'ai-insights') loadAIInsights();
-  }, [activeTab, depId]);
-  useEffect(() => {
     if (activeTab === 'citizen-feedback') loadCitizenFeedback();
   }, [activeTab, depId]);
   useEffect(() => {
@@ -210,6 +205,12 @@ const DepartmentDashboardNew = () => {
   }, [activeTab, depId]);
   useEffect(() => {
     if (activeTab === 'audit-logs') loadAuditLogs();
+  }, [activeTab, depId]);
+  
+  useEffect(() => {
+    if (activeTab === 'analysis' && !progressReport && !progressReportLoading) {
+      fetchProgressReport();
+    }
   }, [activeTab, depId]);
 
   const loadAnalytics = async () => {
@@ -308,24 +309,6 @@ const DepartmentDashboardNew = () => {
         setEscalationsData({ escalations: [], repeatPatterns: [] });
       }
     } finally { setEscalationsLoading(false); }
-  };
-  const loadAIInsights = async () => {
-    try {
-      setAiInsightsLoading(true);
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        await handleAuthError(new Error('No token'));
-        return;
-      }
-      const res = await departmentDashboardService.getAiInsights(depId, token);
-      if (res.success) setAiInsightsList(res.data || []);
-    } catch (e) {
-      const handled = await handleAuthError(e);
-      if (!handled) {
-        console.error('Error loading AI insights:', e);
-        setAiInsightsList([]);
-      }
-    } finally { setAiInsightsLoading(false); }
   };
   const loadCitizenFeedback = async () => {
     try {
@@ -695,9 +678,9 @@ const DepartmentDashboardNew = () => {
     { id: 'grievances', label: 'Grievances', icon: FileText },
     { id: 'budget-management', label: 'Budget Management', icon: DollarSign },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'analysis', label: 'Progress Analysis', icon: Sparkles },
     { id: 'resources', label: 'Resources', icon: Briefcase },
     { id: 'escalations', label: 'Escalations', icon: AlertTriangle },
-    { id: 'ai-insights', label: 'AI Insights', icon: TrendingUp },
     { id: 'citizen-feedback', label: 'Citizen Feedback', icon: MessageSquare },
     { id: 'knowledge-base', label: 'Knowledge Base', icon: BookOpen },
     { id: 'officers', label: 'Officers', icon: Users },
@@ -1064,7 +1047,6 @@ const DepartmentDashboardNew = () => {
     tenderProjectStatus,
     departmentHealthScore,
     zonePerformance,
-    aiInsights,
     alertsRiskMonitoring,
     recentActivityFeed,
     categoryWiseGrievances = [],
@@ -1464,38 +1446,6 @@ const DepartmentDashboardNew = () => {
                 <span>{resourceHealth.materials.critical} Critical</span>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* AI Insights */}
-      {aiInsights && aiInsights.length > 0 && (
-        <div className="bg-white rounded-xl border border-stone-200 p-8 shadow-lg">
-          <div className="flex items-center gap-3 mb-6">
-            <TrendingUp className="w-8 h-8 text-stone-600" />
-            <h3 className="text-xl font-bold text-stone-900">AI Insights & Recommendations</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {aiInsights.slice(0, 4).map((insight, index) => (
-              <div key={index} className="bg-stone-50/50 rounded-xl p-5 border border-stone-200 shadow-sm hover:shadow-md transition-all">
-                <div className="flex items-start justify-between mb-3">
-                  <span className={`text-xs font-semibold px-3 py-1 rounded-lg border ${
-                    insight.priority === 'High' ? 'bg-stone-100 text-stone-800 border-stone-200' :
-                    'bg-stone-50 text-stone-700 border-stone-200'
-                  }`}>
-                    {insight.priority} Priority
-                  </span>
-                  <span className="text-xs font-semibold text-stone-500">
-                    {Math.round((insight.confidence || 0) * 100)}% Confidence
-                  </span>
-                </div>
-                <p className="text-sm font-semibold text-stone-900 mb-3">{insight.message}</p>
-                <div className="bg-stone-50 rounded-lg p-3 border border-stone-200">
-                  <p className="text-xs font-semibold text-stone-600 uppercase tracking-wide mb-1">Recommendation:</p>
-                  <p className="text-xs font-medium text-stone-800">{insight.recommendation}</p>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       )}
@@ -2043,9 +1993,9 @@ const DepartmentDashboardNew = () => {
                   {progressReport.parsed?.sections && progressReport.parsed.sections.length > 0 ? (
                     <div className="p-6 space-y-6">
                       {progressReport.parsed.sections.map((section, index) => (
-                        <div key={index} className="border-b border-stone-200 last:border-0 pb-6 last:pb-0">
+                        <div key={index} className="space-y-3">
                           {section.level === 1 && (
-                            <h2 className="text-2xl font-bold text-stone-900 mb-3">{section.text}</h2>
+                            <h2 className="text-2xl font-bold text-stone-900 mb-3 pb-2 border-b-2 border-blue-600">{section.text}</h2>
                           )}
                           {section.level === 2 && (
                             <h3 className="text-xl font-bold text-stone-800 mb-3 flex items-center gap-2">
@@ -2054,18 +2004,38 @@ const DepartmentDashboardNew = () => {
                             </h3>
                           )}
                           {section.level === 3 && (
-                            <h4 className="text-lg font-semibold text-stone-700 mb-2">{section.text}</h4>
+                            <h4 className="text-lg font-semibold text-stone-700 mb-2 mt-3">{section.text}</h4>
                           )}
-                          {section.content && (
-                            <div className="prose prose-stone max-w-none">
+                          {section.level === 4 && (
+                            <h5 className="text-base font-semibold text-stone-600 mb-2">{section.text}</h5>
+                          )}
+                          
+                          {/* Render paragraphs if available, otherwise render content */}
+                          {section.paragraphs && section.paragraphs.length > 0 ? (
+                            <div className="space-y-2">
+                              {section.paragraphs.map((paragraph, pIndex) => (
+                                <p 
+                                  key={pIndex}
+                                  className="text-stone-700 leading-relaxed"
+                                  dangerouslySetInnerHTML={{ 
+                                    __html: paragraph
+                                      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-stone-900">$1</strong>')
+                                      .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+                                      .replace(/^- (.+)$/gm, '<li class="ml-4">$1</li>')
+                                      .replace(/(<li>.*<\/li>)/s, '<ul class="list-disc pl-5 space-y-1 my-2">$1</ul>')
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          ) : section.content && (
+                            <div className="text-stone-700 leading-relaxed">
                               <div 
-                                className="text-stone-700 leading-relaxed whitespace-pre-wrap"
                                 dangerouslySetInnerHTML={{ 
                                   __html: section.content
-                                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                                    .replace(/^- (.+)$/gm, '<li>$1</li>')
-                                    .replace(/(<li>.*<\/li>)/s, '<ul class="list-disc pl-5 space-y-1">$1</ul>')
+                                    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-stone-900">$1</strong>')
+                                    .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+                                    .replace(/^- (.+)$/gm, '<li class="ml-4">$1</li>')
+                                    .replace(/(<li>.*<\/li>)/s, '<ul class="list-disc pl-5 space-y-1 my-2">$1</ul>')
                                 }}
                               />
                             </div>
@@ -3043,91 +3013,6 @@ const DepartmentDashboardNew = () => {
     );
   };
 
-  // Render AI Insights tab
-  const renderAIInsights = () => {
-    if (aiInsightsLoading) {
-      return (
-        <div className="flex items-center justify-center py-24 bg-white rounded-xl border border-stone-200">
-          <Loader className="w-10 h-10 animate-spin text-stone-500" />
-          <span className="ml-3 text-stone-600">Loading AI insights...</span>
-        </div>
-      );
-    }
-    return (
-      <div className="space-y-6">
-        <h2 className="text-2xl font-bold text-stone-900 uppercase tracking-wide">AI Insights & Recommendations</h2>
-        {aiInsightsList.map((insight) => {
-          const priorityColors = {
-            'High': 'bg-red-100 text-red-800 border-red-500',
-            'Medium': 'bg-orange-100 text-orange-800 border-orange-500',
-            'Low': 'bg-green-100 text-green-800 border-green-500'
-          };
-          const borderColors = {
-            'High': 'border-red-500',
-            'Medium': 'border-orange-500',
-            'Low': 'border-green-500'
-          };
-          const priority = insight.priority || 'Medium';
-          const explanation = insight.ai_explanation || {};
-          const metrics = insight.metrics || {};
-          return (
-            <div key={insight.id} className={`bg-white rounded-xl border-2 ${borderColors[priority] || 'border-stone-300'} shadow-lg p-6`}>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <h3 className="text-lg font-bold text-stone-900">{insight.title || insight.insight_type || 'AI Insight'}</h3>
-                  <span className={`px-3 py-1 rounded-lg text-xs font-semibold ${priorityColors[priority] || priorityColors.Medium}`}>
-                    {priority} Priority
-                  </span>
-                </div>
-                <span className="text-sm text-stone-600">Confidence: {insight.confidence_score ? Math.round(insight.confidence_score) : 0}%</span>
-              </div>
-              <p className="text-sm text-stone-700 mb-4">{insight.description || 'N/A'}</p>
-              {explanation.reasons && (
-                <div className="bg-blue-50 rounded-lg p-4 mb-4">
-                  <p className="text-sm font-semibold text-blue-900 mb-2">AI Explanation</p>
-                  <ul className="list-disc list-inside text-sm text-blue-800 space-y-1">
-                    {explanation.reasons.map((reason, idx) => (
-                      <li key={idx}>{reason}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {Object.keys(metrics).length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                  {Object.entries(metrics).map(([key, value]) => (
-                    <div key={key} className="bg-stone-50 rounded-lg p-3">
-                      <p className="text-xs text-stone-500 mb-1">{key}</p>
-                      <p className="text-sm font-semibold text-stone-900">{value}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {insight.recommended_action && (
-                <div className="bg-stone-100 rounded-lg p-4 mb-4">
-                  <p className="text-sm font-semibold text-stone-900 mb-1">Recommended Action</p>
-                  <p className="text-sm text-stone-700">{insight.recommended_action}</p>
-                </div>
-              )}
-              <div className="flex gap-3">
-                <button className="px-6 py-2 bg-stone-900 text-white rounded-lg font-semibold hover:bg-stone-800 transition-colors">
-                  ACCEPT
-                </button>
-                <button className="px-6 py-2 bg-white border-2 border-stone-300 text-stone-800 rounded-lg font-semibold hover:bg-stone-50 transition-colors">
-                  DISMISS
-                </button>
-              </div>
-            </div>
-          );
-        })}
-        {aiInsightsList.length === 0 && (
-          <div className="bg-white rounded-xl border border-stone-200 p-8 text-center">
-            <p className="text-stone-500">No AI insights available</p>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   // Render Citizen Feedback tab
   const renderCitizenFeedback = () => {
     if (citizenFeedbackLoading) {
@@ -3742,6 +3627,178 @@ const DepartmentDashboardNew = () => {
     );
   };
 
+  // Fetch progress report
+  const fetchProgressReport = async () => {
+    setProgressReportLoading(true);
+    try {
+      const response = await fetch('/api/progress-reports/latest', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        }
+      });
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        setProgressReport(data.data);
+      } else {
+        setProgressReport(null);
+      }
+    } catch (error) {
+      console.error('Error fetching progress report:', error);
+      setProgressReport(null);
+    } finally {
+      setProgressReportLoading(false);
+    }
+  };
+
+  // Render Progress Analysis tab
+  const renderProgressAnalysis = () => {
+    if (progressReportLoading) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <Loader className="w-8 h-8 animate-spin text-gray-600" />
+          <span className="ml-3 text-gray-600">Loading progress analysis...</span>
+        </div>
+      );
+    }
+
+    if (!progressReport) {
+      return (
+        <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+          <Sparkles className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">No Analysis Available</h3>
+          <p className="text-gray-600 mb-4">
+            Progress reports are generated automatically every hour. Check back soon!
+          </p>
+          <button
+            onClick={fetchProgressReport}
+            className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+          >
+            Refresh
+          </button>
+        </div>
+      );
+    }
+
+    const { parsed, content, lastModified } = progressReport;
+
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-gray-900 to-gray-700 rounded-xl shadow-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">AI Progress Analysis</h2>
+              <p className="text-gray-300">
+                Last updated: {new Date(lastModified).toLocaleString()}
+              </p>
+            </div>
+            <button
+              onClick={fetchProgressReport}
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <Activity className="w-4 h-4" />
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        {/* Key Metrics */}
+        {parsed?.metrics && Object.keys(parsed.metrics).length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {parsed.metrics.totalGrievances !== undefined && (
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Total Grievances</p>
+                    <p className="text-3xl font-bold text-gray-900">{parsed.metrics.totalGrievances}</p>
+                  </div>
+                  <FileText className="w-10 h-10 text-blue-500" />
+                </div>
+              </div>
+            )}
+            
+            {parsed.metrics.resolutionRate !== undefined && (
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Resolution Rate</p>
+                    <p className="text-3xl font-bold text-green-600">{parsed.metrics.resolutionRate.toFixed(1)}%</p>
+                  </div>
+                  <CheckCircle className="w-10 h-10 text-green-500" />
+                </div>
+              </div>
+            )}
+            
+            {parsed.metrics.performanceScore !== undefined && (
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Performance Score</p>
+                    <p className="text-3xl font-bold text-purple-600">{parsed.metrics.performanceScore.toFixed(1)}/10</p>
+                  </div>
+                  <TrendingUp className="w-10 h-10 text-purple-500" />
+                </div>
+              </div>
+            )}
+            
+            {parsed.metrics.officerUtilization !== undefined && (
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Officer Utilization</p>
+                    <p className="text-3xl font-bold text-orange-600">{parsed.metrics.officerUtilization.toFixed(1)}%</p>
+                  </div>
+                  <Users className="w-10 h-10 text-orange-500" />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Report Content */}
+        <div className="bg-white rounded-xl shadow-lg p-8">
+          <div className="prose prose-stone max-w-none">
+            {/* Render markdown content */}
+            <div 
+              className="markdown-content"
+              dangerouslySetInnerHTML={{ __html: formatMarkdownToHTML(content) }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Helper function to convert markdown to HTML
+  const formatMarkdownToHTML = (markdown) => {
+    if (!markdown) return '';
+    
+    let html = markdown
+      // Headers
+      .replace(/^### (.*$)/gim, '<h3 class="text-xl font-bold text-gray-900 mt-6 mb-3">$1</h3>')
+      .replace(/^## (.*$)/gim, '<h2 class="text-2xl font-bold text-gray-900 mt-8 mb-4">$1</h2>')
+      .replace(/^# (.*$)/gim, '<h1 class="text-3xl font-bold text-gray-900 mt-10 mb-5">$1</h1>')
+      // Bold
+      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
+      // Italic
+      .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+      // Lists
+      .replace(/^\- (.*$)/gim, '<li class="ml-4">$1</li>')
+      .replace(/^\* (.*$)/gim, '<li class="ml-4">$1</li>')
+      // Line breaks
+      .replace(/\n\n/g, '</p><p class="mb-4">')
+      .replace(/\n/g, '<br/>');
+    
+    // Wrap in paragraph tags
+    html = '<p class="mb-4">' + html + '</p>';
+    
+    // Wrap lists in ul tags
+    html = html.replace(/(<li.*?<\/li>)+/g, '<ul class="list-disc list-inside mb-4 space-y-2">$&</ul>');
+    
+    return html;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FFF8F0] via-[#FFFBF5] to-[#FFF5E8]">
       {/* Premium Header */}
@@ -3783,9 +3840,9 @@ const DepartmentDashboardNew = () => {
         {activeTab === 'grievances' && renderGrievances()}
         {activeTab === 'budget-management' && <BudgetManagement depId={depId} />}
         {activeTab === 'analytics' && renderAnalytics()}
+        {activeTab === 'analysis' && renderProgressAnalysis()}
         {activeTab === 'resources' && renderResources()}
         {activeTab === 'escalations' && renderEscalations()}
-        {activeTab === 'ai-insights' && renderAIInsights()}
         {activeTab === 'citizen-feedback' && renderCitizenFeedback()}
         {activeTab === 'knowledge-base' && renderKnowledgeBase()}
         {activeTab === 'officers' && renderOfficers()}

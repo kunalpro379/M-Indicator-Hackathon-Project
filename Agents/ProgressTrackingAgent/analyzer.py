@@ -1,19 +1,18 @@
 """
-Analyzer module for processing grievances, feedback, and proofs using DeepSeek
+Analyzer module for processing grievances, feedback, and proofs using Gemini AI
 """
-from openai import OpenAI
+import requests
 from typing import Dict, Any, List, Optional
 import config
 import json
 
 class GrievanceAnalyzer:
     def __init__(self):
-        # Initialize DeepSeek client (OpenAI-compatible API)
-        self.client = OpenAI(
-            api_key=config.DEEPSEEK_API_KEY,
-            base_url=config.DEEPSEEK_BASE_URL
-        )
-        self.model = "deepseek-chat"  # DeepSeek's chat model
+        # Initialize Gemini API
+        self.api_key = config.GEMINI_API_KEY
+        # Use gemini-3.1-pro-preview as requested
+        self.api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key={self.api_key}"
+        print("✅ Gemini AI client initialized")
     
     def analyze_status_progress(self, grievance: Dict[str, Any], workflow: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Analyze the progress status of a grievance"""
@@ -145,33 +144,46 @@ class GrievanceAnalyzer:
         }
     
     def _analyze_sentiment(self, text: str) -> Dict[str, Any]:
-        """Analyze sentiment of feedback text using DeepSeek"""
+        """Analyze sentiment of feedback text using Gemini"""
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system", 
-                        "content": "You are a sentiment analysis expert. Analyze feedback and provide: 1) sentiment (positive/negative/neutral), 2) sentiment score (-1 to 1), 3) key points. Respond ONLY with valid JSON."
-                    },
-                    {
-                        "role": "user", 
-                        "content": f"Analyze this feedback and respond with JSON containing 'sentiment', 'score', and 'key_points' fields:\n\n{text}"
+            prompt = f"""Analyze the sentiment of this feedback and respond with ONLY valid JSON containing 'sentiment', 'score', and 'key_points' fields.
+
+Feedback: {text}
+
+Respond with JSON in this format:
+{{
+  "sentiment": "positive" or "negative" or "neutral",
+  "score": number between -1 and 1,
+  "key_points": ["point1", "point2", ...]
+}}"""
+
+            response = requests.post(
+                self.api_url,
+                headers={'Content-Type': 'application/json'},
+                json={
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {
+                        "temperature": 0.3,
+                        "maxOutputTokens": 500
                     }
-                ],
-                temperature=0.3,
-                max_tokens=500
+                },
+                timeout=30
             )
             
-            content = response.choices[0].message.content.strip()
-            # Try to extract JSON from response
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0].strip()
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0].strip()
-            
-            result = json.loads(content)
-            return result
+            if response.status_code == 200:
+                result = response.json()
+                content = result['candidates'][0]['content']['parts'][0]['text'].strip()
+                
+                # Try to extract JSON from response
+                if "```json" in content:
+                    content = content.split("```json")[1].split("```")[0].strip()
+                elif "```" in content:
+                    content = content.split("```")[1].split("```")[0].strip()
+                
+                return json.loads(content)
+            else:
+                return {"sentiment": "neutral", "score": 0, "key_points": []}
+                
         except Exception as e:
             print(f"Error analyzing sentiment: {e}")
             return {"sentiment": "neutral", "score": 0, "key_points": []}
@@ -194,7 +206,7 @@ class GrievanceAnalyzer:
         return analysis
     
     def generate_grievance_summary(self, grievance_data: Dict[str, Any]) -> str:
-        """Generate a comprehensive summary of the grievance using DeepSeek"""
+        """Generate a comprehensive summary of the grievance using Gemini"""
         try:
             # Create a concise representation
             summary_input = {
@@ -208,23 +220,29 @@ class GrievanceAnalyzer:
                 "sentiment": grievance_data.get("feedback_analysis", {}).get("sentiment")
             }
             
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system", 
-                        "content": "You are an expert at summarizing grievance data. Create a concise 2-3 sentence summary highlighting key points."
-                    },
-                    {
-                        "role": "user", 
-                        "content": f"Summarize this grievance:\n{json.dumps(summary_input, indent=2)}"
+            prompt = f"""Create a concise 2-3 sentence summary of this grievance highlighting key points:
+
+{json.dumps(summary_input, indent=2)}"""
+
+            response = requests.post(
+                self.api_url,
+                headers={'Content-Type': 'application/json'},
+                json={
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {
+                        "temperature": 0.5,
+                        "maxOutputTokens": 200
                     }
-                ],
-                max_tokens=200,
-                temperature=0.5
+                },
+                timeout=30
             )
             
-            return response.choices[0].message.content.strip()
+            if response.status_code == 200:
+                result = response.json()
+                return result['candidates'][0]['content']['parts'][0]['text'].strip()
+            else:
+                return f"Grievance {grievance_data.get('grievance_id')} - Status: {grievance_data.get('status')}"
+                
         except Exception as e:
             print(f"Error generating summary: {e}")
             return f"Grievance {grievance_data.get('grievance_id')} - Status: {grievance_data.get('status')}"
@@ -289,8 +307,10 @@ class GrievanceAnalyzer:
         }
     
     def generate_comprehensive_department_report(self, department_data: Dict[str, Any]) -> str:
-        """Generate a comprehensive natural language report using DeepSeek AI"""
+        """Generate a comprehensive natural language report using Gemini AI"""
         try:
+            print("   📝 Preparing data for AI analysis...")
+            
             # Prepare concise data for AI analysis
             report_input = {
                 "department_name": department_data.get("department_name"),
@@ -350,24 +370,75 @@ DATA:
 
 Write in a professional, clear, and actionable tone. Focus on insights and recommendations, not just data repetition. Be specific about numbers and percentages."""
 
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an expert government department analyst who writes comprehensive, actionable progress reports. Write in clear, professional language with specific insights and recommendations."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
+            print("   🤖 Calling Gemini AI (this may take 30-60 seconds)...")
+            
+            # Call Gemini API
+            response = requests.post(
+                self.api_url,
+                headers={'Content-Type': 'application/json'},
+                json={
+                    "contents": [{
+                        "parts": [{
+                            "text": prompt
+                        }]
+                    }],
+                    "generationConfig": {
+                        "temperature": 0.7,
+                        "maxOutputTokens": 3000,
+                        "topP": 0.95,
+                        "topK": 40
                     }
-                ],
-                temperature=0.7,
-                max_tokens=3000
+                },
+                timeout=60
             )
             
-            return response.choices[0].message.content.strip()
+            if response.status_code == 200:
+                result = response.json()
+                ai_text = result['candidates'][0]['content']['parts'][0]['text']
+                print("   ✅ AI report generated successfully")
+                return ai_text.strip()
+            else:
+                print(f"   ❌ Gemini API error: {response.status_code} - {response.text}")
+                return self._generate_fallback_report(department_data)
             
         except Exception as e:
-            print(f"Error generating comprehensive report: {e}")
-            return f"Error generating AI report: {str(e)}"
+            print(f"   ❌ Error generating comprehensive report: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            # Return a basic report if AI fails
+            return self._generate_fallback_report(department_data)
+    
+    def _generate_fallback_report(self, department_data: Dict[str, Any]) -> str:
+        """Generate a basic report if AI fails"""
+        dept_name = department_data.get('department_name', 'Unknown Department')
+        summary = department_data.get('summary_counts', {})
+        grievances = department_data.get('grievance_analysis', {})
+        performance = department_data.get('performance_metrics', {})
+        
+        return f"""# {dept_name} - Progress Report
+
+## Executive Summary
+
+This is an automated fallback report generated due to AI service unavailability.
+
+## Key Metrics
+
+- **Total Grievances:** {grievances.get('total_grievances', 0)}
+- **Resolved:** {grievances.get('resolved_count', 0)}
+- **Resolution Rate:** {performance.get('resolution_rate', 0)}%
+- **Total Officers:** {summary.get('total_officers', 0)}
+- **Total Projects:** {summary.get('total_projects', 0)}
+
+## Status
+
+The department is operational. For detailed analysis, please retry when AI services are available.
+
+## Recommendations
+
+1. Review pending grievances
+2. Monitor resource utilization
+3. Address any critical alerts
+
+*Note: This is a fallback report. Full AI analysis was unavailable.*
+"""

@@ -34,16 +34,24 @@ import commentsRoutes from './src/routes/comments.routes.js';
 import whatsappRoutes from './src/routes/whatsapp.routes.js';
 import whatsappAdminRoutes from './src/routes/whatsapp-admin.routes.js';
 import progressReportsRoutes from './src/routes/progress-reports.routes.js';
+import fieldWorkerRequestsRoutes from './src/routes/field-worker-requests.routes.js';
+import pendingRegistrationsRoutes from './src/routes/pending-registrations.routes.js';
+import contractorAnalysisRoutes from './src/routes/contractor-analysis.routes.js';
 
 // Import services
 import pool from './src/config/database.js';
 import telegramBot from './src/services/telegram.bot.service.js';
+import telegramFieldWorkerBot from './src/services/telegram-fieldworker-bot.service.js';
+import telegramContractorBot from './src/services/telegram-contractor-bot.service.js';
 import whatsappScheduler from './src/services/whatsapp.scheduler.js';
 import runMigration from './src/migrations/fix_citizens_table.js';
 import addLocationToGrievances from './src/migrations/add_location_to_grievances.js';
 import fixDepartmentTrigger from './src/migrations/fix_department_trigger.js';
 import createWhatsAppTables from './src/migrations/create_whatsapp_tables.js';
 import createWorkerContractorTables from './src/migrations/create_worker_contractor_tables.js';
+import addContractorAnalysis from './src/migrations/add_contractor_analysis.js';
+import createFieldWorkerStatesTable from './src/migrations/create_fieldworker_states_table.js';
+import createUserStatesTable from './src/migrations/create_user_states_table.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -131,6 +139,9 @@ app.use('/api/roles', rolesRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/whatsapp-admin', whatsappAdminRoutes);
 app.use('/api/progress-reports', progressReportsRoutes);
+app.use('/api/field-worker-requests', fieldWorkerRequestsRoutes);
+app.use('/api/pending-registrations', pendingRegistrationsRoutes);
+app.use('/api/contractor-analysis', contractorAnalysisRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -164,21 +175,65 @@ app.use((err, req, res, next) => {
     // await addLocationToGrievances();
     await createWhatsAppTables();
     await createWorkerContractorTables();
+    await addContractorAnalysis();
+    await createFieldWorkerStatesTable();
+    await createUserStatesTable();
     console.log('✅ All migrations completed');
   } catch (error) {
     console.warn('⚠️  Database migration failed:', error.message);
   }
 })();
 
-// Initialize Telegram Bot (non-blocking) - TEMPORARILY DISABLED
+// Initialize Telegram Grievance Bot (Citizens)
 (async () => {
   try {
-    console.log('Telegram Bot initialization skipped (disabled for debugging)');
-    // await telegramBot.init();
-    // console.log('Telegram Bot initialized');
+    const grievanceToken = process.env.TELEGRAM_BOT_TOKEN;
+    
+    if (grievanceToken && !grievanceToken.includes('your_') && grievanceToken.length > 20) {
+      await telegramBot.init();
+      console.log('✅ Telegram Grievance Bot initialized');
+    } else {
+      console.log('⚠️  Telegram Grievance Bot token not configured - skipping initialization');
+    }
   } catch (error) {
-    console.warn('  Telegram Bot initialization failed:', error.message);
-    console.warn('  Server will continue without Telegram bot');
+    console.warn('⚠️  Telegram Grievance Bot initialization failed:', error.message);
+    console.warn('  Server will continue without Grievance bot');
+  }
+})();
+
+// Initialize Telegram Field Worker Bot (Department Staff)
+(async () => {
+  try {
+    const fieldWorkerToken = process.env.TELEGRAM_FIELDWORKER_BOT_TOKEN;
+    
+    if (fieldWorkerToken && !fieldWorkerToken.includes('your_') && fieldWorkerToken.length > 20) {
+      await telegramFieldWorkerBot.initialize();
+      console.log('✅ Telegram Field Worker Bot initialized');
+    } else {
+      console.log('⚠️  Telegram Field Worker Bot token not configured - skipping initialization');
+    }
+  } catch (error) {
+    console.warn('⚠️  Telegram Field Worker Bot initialization failed:', error.message);
+    console.warn('  Server will continue without Field Worker bot');
+  }
+})();
+
+// Initialize Telegram Contractor Bot
+(async () => {
+  try {
+    const contractorToken = process.env.TELEGRAM_CONTRACTOR_BOT_TOKEN;
+    
+    // Only initialize if token is configured and not a placeholder
+    if (contractorToken && !contractorToken.includes('your_') && contractorToken.length > 20) {
+      telegramContractorBot.initialize();
+      console.log('✅ Telegram Contractor Bot initialized');
+    } else {
+      console.log('⚠️  Telegram Contractor Bot token not configured - skipping initialization');
+      console.log('   Add TELEGRAM_CONTRACTOR_BOT_TOKEN to .env to enable contractor bot');
+    }
+  } catch (error) {
+    console.warn('⚠️  Telegram Contractor Bot initialization failed:', error.message);
+    console.warn('  Server will continue without Contractor bot');
   }
 })();
 

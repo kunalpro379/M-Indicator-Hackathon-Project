@@ -201,11 +201,41 @@ class ProgressTrackingSchedulerService {
       // Ensure container exists
       await containerClient.createIfNotExists();
 
+      // Import pool for database operations
+      const { default: pool } = await import('../config/database.js');
+
       // Upload each file
       let uploadedCount = 0;
       for (const file of files) {
         try {
-          const blobName = `${this.reportsBlobFolder}/${file.name}`;
+          // Extract department name from filename
+          // Format: department_Water_Supply_Department_20260301_040940.md
+          const match = file.name.match(/department_(.+)_(\d{8})_(\d{6})\.md/);
+          
+          if (!match) {
+            console.log(`⚠️  Skipping ${file.name} - doesn't match expected format`);
+            continue;
+          }
+
+          const departmentName = match[1].replace(/_/g, ' ');
+          const dateStr = match[2]; // YYYYMMDD
+          const timeStr = match[3]; // HHMMSS
+
+          // Get department ID from database
+          const deptResult = await pool.query(
+            'SELECT id FROM departments WHERE name = $1',
+            [departmentName]
+          );
+
+          if (deptResult.rows.length === 0) {
+            console.log(`⚠️  Department not found: ${departmentName}`);
+            continue;
+          }
+
+          const departmentId = deptResult.rows[0].id;
+
+          // Create blob path: progress-reports/{departmentId}/{filename}
+          const blobName = `${this.reportsBlobFolder}/${departmentId}/${file.name}`;
           const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
           // Read file content
@@ -218,11 +248,45 @@ class ProgressTrackingSchedulerService {
             },
             metadata: {
               uploadedAt: new Date().toISOString(),
-              source: 'progress-tracking-agent'
+              source: 'progress-tracking-agent',
+              departmentId: departmentId,
+              departmentName: departmentName,
+              reportDate: `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}`,
+              reportTime: `${timeStr.slice(0, 2)}:${timeStr.slice(2, 4)}:${timeStr.slice(4, 6)}`
             }
           });
 
+          const blobUrl = blockBlobClient.url;
           console.log(`✅ Uploaded: ${file.name} → ${blobName}`);
+
+          // Save URL to database in department_dashboards table
+          await pool.query(
+            `INSERT INTO department_dashboards (department_id, dashboard_data, created_at, updated_at)
+             VALUES ($1, $2, NOW(), NOW())
+             ON CONFLICT (department_id)
+             DO UPDATE SET 
+               dashboard_data = jsonb_set(
+                 COALESCE(department_dashboards.dashboard_data, '{}'::jsonb),
+                 '{progressReports}',
+                 COALESCE(department_dashboards.dashboard_data->'progressReports', '[]'::jsonb) || $2::jsonb->'progressReports'
+               ),
+               updated_at = NOW()`,
+            [
+              departmentId,
+              JSON.stringify({
+                progressReports: [{
+                  url: blobUrl,
+                  fileName: file.name,
+                  uploadedAt: new Date().toISOString(),
+                  reportDate: `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}`,
+                  reportTime: `${timeStr.slice(0, 2)}:${timeStr.slice(2, 4)}:${timeStr.slice(4, 6)}`,
+                  departmentName: departmentName
+                }]
+              })
+            ]
+          );
+
+          console.log(`💾 Saved URL to database for department: ${departmentName} (${departmentId})`);
           uploadedCount++;
 
         } catch (uploadError) {
@@ -241,7 +305,7 @@ class ProgressTrackingSchedulerService {
   /**
    * Get the latest report for a specific department from Azure Blob Storage
    */
-  async getLatestDepartmentReport(departmentName) {
+  async getLatestDepartmentReport(departmentId) {
     try {
       if (!this.connectionString) {
         throw new Error('Azure Storage connection string not configured');
@@ -250,13 +314,12 @@ class ProgressTrackingSchedulerService {
       const blobServiceClient = BlobServiceClient.fromConnectionString(this.connectionString);
       const containerClient = blobServiceClient.getContainerClient(this.containerName);
 
-      // List all blobs in the progress-reports folder
+      // List all blobs in the department-specific folder: progress-reports/{departmentId}/
+      const prefix = `${this.reportsBlobFolder}/${departmentId}/`;
       const blobs = [];
-      for await (const blob of containerClient.listBlobsFlat({ prefix: this.reportsBlobFolder })) {
-        // Filter by department name
-        if (blob.name.includes(departmentName.replace(/ /g, '_'))) {
-          blobs.push(blob);
-        }
+      
+      for await (const blob of containerClient.listBlobsFlat({ prefix })) {
+        blobs.push(blob);
       }
 
       if (blobs.length === 0) {

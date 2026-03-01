@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import Dict, Any, List
 from pathlib import Path
 import config
+from blob_uploader import BlobUploader
 
 class DecimalEncoder:
     """Not needed anymore - no JSON generation"""
@@ -15,6 +16,7 @@ class ReportGenerator:
     def __init__(self):
         self.output_dir = Path(config.REPORT_OUTPUT_DIR)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.blob_uploader = BlobUploader()
     
     def generate_department_report(self, department_id: str, department_name: str, report_data: Dict[str, Any], ai_report: str = None) -> str:
         """Generate AI-powered comprehensive department progress report (Markdown only)"""
@@ -24,6 +26,11 @@ class ReportGenerator:
         md_report_path = self._generate_markdown_report(report_data, department_id, timestamp, ai_report)
         
         print(f"✓ AI Report generated: {md_report_path}")
+        
+        # Upload to Azure Blob Storage and save URL to database
+        blob_url = self.blob_uploader.upload_report(md_report_path, department_id, department_name)
+        if blob_url:
+            print(f"✓ Report uploaded to blob: {blob_url}")
         
         return str(md_report_path)
     

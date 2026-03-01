@@ -256,14 +256,33 @@ class DatabaseService:
     def save_progress_report_insight(self, department_id: str, report_data: Dict[str, Any]) -> bool:
         """Save progress tracking report as an AI insight"""
         try:
+            import datetime
+            
+            # Helper function to convert datetime objects to ISO strings
+            def convert_datetime(obj):
+                if isinstance(obj, datetime.datetime):
+                    return obj.isoformat()
+                elif isinstance(obj, datetime.date):
+                    return obj.isoformat()
+                elif isinstance(obj, Decimal):
+                    return float(obj)
+                elif isinstance(obj, dict):
+                    return {k: convert_datetime(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [convert_datetime(item) for item in obj]
+                return obj
+            
+            # Clean report_data to remove datetime objects
+            clean_report_data = convert_datetime(report_data)
+            
             conn = self._get_connection()
             cur = conn.cursor()
             
             # Extract key metrics for the insight
-            performance = report_data.get("performance_metrics", {})
-            grievances = report_data.get("grievance_analysis", {})
+            performance = clean_report_data.get("performance_metrics", {})
+            grievances = clean_report_data.get("grievance_analysis", {})
             
-            title = f"Department Progress Report - {report_data.get('department_name', 'Unknown')}"
+            title = f"Department Progress Report - {clean_report_data.get('department_name', 'Unknown')}"
             description = f"""
 Automated progress tracking analysis:
 - Total Grievances: {grievances.get('total_grievances', 0)}
@@ -310,9 +329,9 @@ Automated progress tracking analysis:
                 confidence_score,
                 title,
                 description,
-                json.dumps(report_data, cls=DecimalEncoder),
-                json.dumps(report_data.get('recommendations', []), cls=DecimalEncoder),
-                json.dumps(performance, cls=DecimalEncoder)
+                json.dumps(clean_report_data),
+                json.dumps(clean_report_data.get('recommendations', [])),
+                json.dumps(performance)
             ))
             
             conn.commit()
@@ -322,6 +341,8 @@ Automated progress tracking analysis:
             return True
         except Exception as e:
             print(f"Error saving progress report to database: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def get_department_projects(self, department_id: str) -> List[Dict[str, Any]]:

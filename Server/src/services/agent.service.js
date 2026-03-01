@@ -23,6 +23,19 @@ class AgentService {
   // Delegate to helpers
   loadFieldWorkerState = (userId) => helpers.loadFieldWorkerState(userId);
   saveFieldWorkerState = (userId, state) => helpers.saveFieldWorkerState(userId, state);
+  clearFieldWorkerState = async (userId) => {
+    try {
+      await pool.query('DELETE FROM fieldworker_states WHERE user_id = $1', [userId]);
+      console.log(`✅ Cleared state for user: ${userId}`);
+    } catch (error) {
+      console.error('❌ Error clearing state:', error);
+    }
+  };
+  clearUserState = async (userId) => {
+    // Clear all user data
+    await this.clearFieldWorkerState(userId);
+    console.log(`🔄 User ${userId} logged out - all data cleared`);
+  };
   loadContractorState = (userId) => helpers.loadContractorState(userId);
   saveContractorState = (userId, state) => helpers.saveContractorState(userId, state);
   uploadProofToBlob = (userId, media) => helpers.uploadProofToBlob(userId, media);
@@ -46,13 +59,36 @@ class AgentService {
   /**
    * Main entry point for processing messages from any channel
    */
-  async processMessage({ userId, userName, message, channel, messageId, media, location }) {
+  async processMessage({ userId, userName, message, channel, messageId, media, location, aiContext }) {
     try {
       // Store conversation in DB
       await this.storeConversation(userId, userName, message, channel, messageId);
 
       // Get user context and role
       const userContext = await this.getUserContext(userId);
+
+      // Check AI context for wrong bot detection
+      if (aiContext && aiContext.userType && aiContext.confidence > 0.7) {
+        // If AI detected user is contractor but they're using field worker bot
+        if (aiContext.userType === 'contractor' && channel === 'telegram_fieldworker') {
+          return {
+            text: `⚠️ You mentioned being a contractor.\n\n` +
+                  `This bot is for FIELD WORKERS (individual employees).\n\n` +
+                  `If you're a contractor/company, please use the Contractor Bot instead.\n\n` +
+                  `Are you a field worker? Reply "yes" to continue with field worker registration.`
+          };
+        }
+        
+        // If AI detected user is field worker but they're using contractor bot
+        if (aiContext.userType === 'field_worker' && channel === 'telegram_contractor') {
+          return {
+            text: `⚠️ You seem to be an individual worker.\n\n` +
+                  `This bot is for CONTRACTORS (companies/businesses).\n\n` +
+                  `If you're a field worker, please use the Field Worker Bot instead.\n\n` +
+                  `Are you a contractor/company? Reply "yes" to continue with contractor registration.`
+          };
+        }
+      }
 
       // Route to appropriate agent based on user role and message content
       const response = await this.routeToAgent({
@@ -61,7 +97,8 @@ class AgentService {
         message,
         userContext,
         media,
-        location
+        location,
+        aiContext
       });
 
       // Store agent response
@@ -83,12 +120,12 @@ class AgentService {
    * Department staff members use field_worker workflow
    * New users are onboarded intelligently
    */
-  async routeToAgent({ userId, userName, message, userContext, media, location }) {
+  async routeToAgent({ userId, userName, message, userContext, media, location, aiContext }) {
     const role = userContext?.role;
 
     // New user - intelligent onboarding
     if (!role) {
-      return await this.handleNewUser(userId, userName, message);
+      return await this.handleNewUser(userId, userName, message, aiContext);
     }
 
     // Check if user is active
@@ -105,7 +142,8 @@ class AgentService {
         userName,
         message,
         userContext,
-        media
+        media,
+        aiContext
       });
     }
 
@@ -487,9 +525,25 @@ Return ONLY valid JSON:
      * 🏗️ FIELD WORKER WORKFLOW
      * Conversational daily reporting - ask questions one by one
      */
-    async fieldWorkerWorkflow({ userId, userName, message, userContext, media }) {
+    async fieldWorkerWorkflow({ userId, userName, message, userContext, media, aiContext }) {
       try {
         console.log(`\n🏗️ Field Worker Workflow - User: ${userId}, Message: "${message}"`);
+        
+        // Check AI context for suspicious activity
+        if (aiContext) {
+          console.log(`🤖 AI Context:`, aiContext);
+          
+          // If AI detected user might be a contractor
+          if (aiContext.userType === 'contractor' && aiContext.confidence > 0.6) {
+            console.log(`⚠️ AI detected potential contractor: ${aiContext.userType} (confidence: ${aiContext.confidence})`);
+            return {
+              text: `⚠️ I noticed you mentioned being a contractor.\n\n` +
+                    `This bot is for FIELD WORKERS (individual employees who work for the department).\n\n` +
+                    `Contractors should use the Contractor Bot for company registration.\n\n` +
+                    `Are you a field worker employed by the department? Reply "yes" to continue.`
+            };
+          }
+        }
         
         // Load or create today's report state
         const state = await this.loadFieldWorkerState(userId);
@@ -514,56 +568,69 @@ Return ONLY valid JSON:
 
         // Handle image/proof upload
         if (media) {
-          // Analyze the image with AI
+          console.log(`📸 Processing image upload...`);
           try {
             const proofUrl = await this.uploadProofToBlob(userId, media);
+            console.log(`✅ Image uploaded to: ${proofUrl}`);
 
             // Use AI to analyze what's in the image
             const imageAnalysis = await this.analyzeImageContent(media, state.report);
+            console.log(`🤖 Image analysis:`, imageAnalysis);
 
             // If we don't have description yet, use image analysis
             if (!state.report.description && imageAnalysis.description) {
               state.report.description = imageAnalysis.description;
               state.missingFields = state.missingFields.filter(f => f !== 'description');
+              console.log(`✅ Extracted description from image: ${imageAnalysis.description}`);
             }
 
             // Store the proof
             state.proofs.push(proofUrl);
             await this.saveFieldWorkerState(userId, state);
 
-            // If we still have missing fields, ask for them
-            if (state.missingFields.length > 0) {
-              let response = `📸 Got your photo! `;
-              if (imageAnalysis.description) {
-                response += `I can see: ${imageAnalysis.description}\n\n`;
-              }
+            // Check if all fields are now filled
+            const allFieldsFilled = state.report.description && state.report.site && state.report.hours;
+            
+            if (allFieldsFilled) {
+              // All fields collected, submit report
+              console.log(`✅ All fields collected, submitting report...`);
+              const score = await this.calculateProductivityScore(state.report, { proof_valid: true, confidence: 0.9 });
+              const aiAnalysis = await this.analyzeReportWithAI(state.report, { proof_valid: true });
+              aiAnalysis.channel = 'telegram';
 
-              // Ask next question
-              if (state.missingFields.includes('site')) {
-                response += `Which site or location is this?`;
-              } else if (state.missingFields.includes('hours')) {
-                response += `How many hours did you work on this?`;
-              }
+              await this.storeDailyReport(userId, state.report, state.proofs, score, aiAnalysis);
 
-              return { text: response };
+              state.status = 'complete';
+              await this.saveFieldWorkerState(userId, state);
+
+              return {
+                text: `✅ Report submitted successfully!\n\n` +
+                      `📊 Productivity Score: ${score.toFixed(1)}/10\n` +
+                      `🤖 AI Analysis: ${aiAnalysis.summary}\n\n` +
+                      `Great work today! 💪`
+              };
             }
 
-            // All fields collected, submit report
-            const score = await this.calculateProductivityScore(state.report, { proof_valid: true, confidence: 0.9 });
-            const aiAnalysis = await this.analyzeReportWithAI(state.report, { proof_valid: true });
-            aiAnalysis.channel = 'telegram';
+            // Still have missing fields, ask for them
+            let response = `📸 Got your photo! `;
+            if (imageAnalysis.description) {
+              response += `I can see: ${imageAnalysis.description}\n\n`;
+            }
 
-            await this.storeDailyReport(userId, state.report, state.proofs, score, aiAnalysis);
+            // Ask next question based on what's missing
+            if (!state.report.description) {
+              state.currentQuestion = 'description';
+              response += `What work did you do today?`;
+            } else if (!state.report.site) {
+              state.currentQuestion = 'site';
+              response += `Which site or location is this?`;
+            } else if (!state.report.hours) {
+              state.currentQuestion = 'hours';
+              response += `How many hours did you work on this?`;
+            }
 
-            state.status = 'complete';
             await this.saveFieldWorkerState(userId, state);
-
-            return {
-              text: `✅ Report submitted successfully!\n\n` +
-                    `📊 Productivity Score: ${score.toFixed(1)}/10\n` +
-                    `🤖 AI Analysis: ${aiAnalysis.summary}\n\n` +
-                    `Great work today! 💪`
-            };
+            return { text: response };
 
           } catch (error) {
             console.error('Error processing image:', error);
@@ -573,40 +640,14 @@ Return ONLY valid JSON:
           }
         }
 
-        // Initialize conversation tracking
-        if (!state.currentQuestion) {
-          state.currentQuestion = 'description';
-        }
-
         // Process text message based on current question
         const lowerMessage = message.toLowerCase().trim();
 
-        // Check if all required fields are already filled
-        const allFieldsFilled = state.report.description && state.report.site && state.report.hours;
-        
-        // If all fields are filled but currentQuestion is not 'proof', update it
-        if (allFieldsFilled && state.currentQuestion !== 'proof') {
-          console.log(`✅ All fields filled, moving to proof stage`);
-          state.currentQuestion = 'proof';
-          state.missingFields = [];
+        // Handle greetings at the start
+        if (!state.report.description && !state.report.site && !state.report.hours && 
+            (lowerMessage === 'hi' || lowerMessage === 'hello' || lowerMessage === 'hey' || lowerMessage === 'hi bhai')) {
+          state.currentQuestion = 'description';
           await this.saveFieldWorkerState(userId, state);
-          
-          return {
-            text: `I have all your details:\n\n` +
-                  `📝 Work: ${state.report.description}\n` +
-                  `📍 Site: ${state.report.site}\n` +
-                  `⏰ Hours: ${state.report.hours}\n\n` +
-                  `Now please send a photo of your completed work as proof. 📸`
-          };
-        }
-
-        // Handle greetings
-        if (!state.report.description && (lowerMessage === 'hi' || lowerMessage === 'hello' || lowerMessage === 'hey')) {
-          // Initialize state properly for first interaction
-          if (!state.currentQuestion) {
-            state.currentQuestion = 'description';
-            await this.saveFieldWorkerState(userId, state);
-          }
           
           return {
             text: `Hi ${userName}! 👋\n\nReady to submit your daily work report?\n\nLet's start: What work did you do today?`
@@ -642,9 +683,9 @@ Return ONLY valid JSON:
 
         if (state.currentQuestion === 'hours' && !state.report.hours) {
           // Extract number from message
-          const hoursMatch = message.match(/\d+/);
+          const hoursMatch = message.match(/\d+(\.\d+)?/);
           if (hoursMatch) {
-            state.report.hours = parseInt(hoursMatch[0]);
+            state.report.hours = parseFloat(hoursMatch[0]);
             state.missingFields = state.missingFields.filter(f => f !== 'hours');
             state.currentQuestion = 'proof';
             await this.saveFieldWorkerState(userId, state);
@@ -667,7 +708,7 @@ Return ONLY valid JSON:
           };
         }
 
-        // Fallback - if we reach here, something is wrong, ask what's missing
+        // Fallback - determine what's missing and ask for it
         console.log(`⚠️ Fallback triggered - checking what's missing`);
         
         if (!state.report.description) {

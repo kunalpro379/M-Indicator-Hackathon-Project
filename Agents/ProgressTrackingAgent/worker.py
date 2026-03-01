@@ -10,6 +10,7 @@ from database import DatabaseService
 from analyzer import GrievanceAnalyzer
 from vector_store import VectorStoreService
 from report_generator import ReportGenerator
+from escalation_analyzer import EscalationAnalyzer
 import config
 
 class ProgressTrackingWorker:
@@ -18,6 +19,7 @@ class ProgressTrackingWorker:
         self.analyzer = GrievanceAnalyzer()
         self.vector_store = VectorStoreService()
         self.report_gen = ReportGenerator()
+        self.escalation_analyzer = EscalationAnalyzer()
         print("Progress Tracking Worker initialized")
     
     def process_department(self, department: Dict[str, Any]) -> Dict[str, Any]:
@@ -284,22 +286,61 @@ class ProgressTrackingWorker:
         # Save report to database as AI insight
         self.db.save_progress_report_insight(department_id, report_data)
         
+        # ESCALATION ANALYSIS - Check if issues need escalation
+        print("\n🔍 Running Escalation Analysis...")
+        escalation_data = self.escalation_analyzer.analyze_escalation_needs(
+            department_id=department_id,
+            department_name=department_name,
+            report_data=report_data
+        )
+        
+        # Save escalations to database
+        if escalation_data.get("needs_escalation"):
+            self.escalation_analyzer.save_escalation_to_database(escalation_data)
+            print(f"   🚨 ESCALATION REQUIRED: {escalation_data.get('escalation_level').upper()}")
+            print(f"   📊 Triggers: {escalation_data.get('total_triggers')}")
+            print(f"   📋 Grievances to escalate: {escalation_data.get('total_grievances_to_escalate')}")
+        else:
+            print("   ✅ No escalation needed")
+        
+        # Add escalation data to report
+        report_data["escalation_analysis"] = escalation_data
+        
         print(f"Department {department_name} processing complete")
         print(f"Report saved to: {report_path}")
         
         return report_data
     
     def run_analysis(self):
-        """Run analysis for all departments"""
+        """Run analysis for all departments or specific department if configured"""
         print(f"\n{'#'*60}")
         print(f"Starting Progress Tracking Analysis")
         print(f"Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"{'#'*60}\n")
         
         try:
-            # Fetch all departments
-            departments = self.db.get_all_departments()
-            print(f"Found {len(departments)} active departments")
+            # Check if specific department is configured
+            if config.TARGET_DEPARTMENT_ID:
+                print(f"🎯 Target Department ID: {config.TARGET_DEPARTMENT_ID}")
+                print(f"   Processing ONLY this department\n")
+                
+                # Fetch specific department
+                department = self.db.get_department_by_id(config.TARGET_DEPARTMENT_ID)
+                
+                if not department:
+                    print(f"❌ Department {config.TARGET_DEPARTMENT_ID} not found or inactive")
+                    return
+                
+                if not department.get('is_active'):
+                    print(f"❌ Department {config.TARGET_DEPARTMENT_ID} is not active")
+                    return
+                
+                departments = [department]
+            else:
+                # Fetch all departments
+                departments = self.db.get_all_departments()
+            
+            print(f"Found {len(departments)} department(s) to process")
             
             if not departments:
                 print("No departments found. Exiting.")
@@ -316,13 +357,13 @@ class ProgressTrackingWorker:
                     import traceback
                     traceback.print_exc()
             
-            # Generate consolidated report
-            if all_reports:
+            # Generate consolidated report (only if processing multiple departments)
+            if len(all_reports) > 1:
                 self.report_gen.generate_consolidated_report(all_reports)
             
             print(f"\n{'#'*60}")
             print(f"Analysis Complete")
-            print(f"Processed {len(all_reports)} departments")
+            print(f"Processed {len(all_reports)} department(s)")
             print(f"{'#'*60}\n")
             
         except Exception as e:

@@ -82,17 +82,30 @@ async function createWorkerContractorTables() {
     `);
 
     // Update users table to support field_worker and contractor roles
+    // Add new enum values if they don't exist
     await client.query(`
       DO $$ 
       BEGIN
-        -- Drop existing constraint if it exists
-        ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+        -- Add field_worker to enum if it doesn't exist
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_enum 
+          WHERE enumlabel = 'field_worker' 
+          AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'user_role')
+        ) THEN
+          ALTER TYPE user_role ADD VALUE 'field_worker';
+        END IF;
         
-        -- Add new constraint with field_worker and contractor
-        ALTER TABLE users ADD CONSTRAINT users_role_check 
-        CHECK (role IN ('admin', 'citizen', 'department', 'field_worker', 'contractor'));
+        -- Add contractor to enum if it doesn't exist
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_enum 
+          WHERE enumlabel = 'contractor' 
+          AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'user_role')
+        ) THEN
+          ALTER TYPE user_role ADD VALUE 'contractor';
+        END IF;
       EXCEPTION
-        WHEN duplicate_object THEN NULL;
+        WHEN others THEN
+          RAISE NOTICE 'Could not add enum values: %', SQLERRM;
       END $$;
     `);
 

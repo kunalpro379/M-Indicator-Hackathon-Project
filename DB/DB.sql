@@ -195,8 +195,23 @@ CREATE TABLE public.city_officials (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   embedding USER-DEFINED,
+  city_id uuid,
+  district_id uuid,
+  reports_to uuid,
+  department_id uuid,
   CONSTRAINT city_officials_pkey PRIMARY KEY (id),
-  CONSTRAINT city_officials_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+  CONSTRAINT city_officials_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT city_officials_city_id_fkey FOREIGN KEY (city_id) REFERENCES public.cities(id),
+  CONSTRAINT city_officials_district_id_fkey FOREIGN KEY (district_id) REFERENCES public.districts(id),
+  CONSTRAINT city_officials_reports_to_fkey FOREIGN KEY (reports_to) REFERENCES public.government_officials(id),
+  CONSTRAINT city_officials_department_id_fkey FOREIGN KEY (department_id) REFERENCES public.departments(id)
+);
+CREATE TABLE public.contractor_states (
+  id integer NOT NULL DEFAULT nextval('contractor_states_id_seq'::regclass),
+  user_id character varying NOT NULL UNIQUE,
+  state_data jsonb NOT NULL,
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT contractor_states_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.contractors (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -218,7 +233,38 @@ CREATE TABLE public.contractors (
   documents jsonb,
   certifications jsonb,
   embedding USER-DEFINED,
+  ai_analysis jsonb DEFAULT '{}'::jsonb,
   CONSTRAINT contractors_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.daily_reports (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  date date NOT NULL,
+  description text NOT NULL,
+  site text NOT NULL,
+  hours integer CHECK (hours >= 1 AND hours <= 24),
+  blockers text,
+  proof_urls ARRAY,
+  proof_verified boolean DEFAULT false,
+  productivity_score double precision CHECK (productivity_score >= 0::double precision AND productivity_score <= 10::double precision),
+  created_at timestamp without time zone DEFAULT now(),
+  ai_summary text,
+  ai_analysis jsonb,
+  sentiment character varying,
+  quality_score numeric,
+  tasks_completed ARRAY,
+  materials_used ARRAY,
+  issues_found ARRAY,
+  status character varying DEFAULT 'submitted'::character varying,
+  reviewed_by uuid,
+  reviewed_at timestamp without time zone,
+  reviewer_notes text,
+  channel character varying,
+  message_id character varying,
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT daily_reports_pkey PRIMARY KEY (id),
+  CONSTRAINT daily_reports_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT daily_reports_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.users(id)
 );
 CREATE TABLE public.department_dashboards (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -301,9 +347,17 @@ CREATE TABLE public.departmentofficers (
   skills jsonb,
   certifications jsonb,
   embedding USER-DEFINED,
+  city_id uuid,
+  ward_id uuid,
+  reports_to_city_official_id uuid,
+  reports_to_ward_officer_id uuid,
   CONSTRAINT departmentofficers_pkey PRIMARY KEY (id),
   CONSTRAINT departmentofficers_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
-  CONSTRAINT departmentofficers_department_id_fkey FOREIGN KEY (department_id) REFERENCES public.departments(id)
+  CONSTRAINT departmentofficers_department_id_fkey FOREIGN KEY (department_id) REFERENCES public.departments(id),
+  CONSTRAINT departmentofficers_city_id_fkey FOREIGN KEY (city_id) REFERENCES public.cities(id),
+  CONSTRAINT departmentofficers_ward_id_fkey FOREIGN KEY (ward_id) REFERENCES public.wards(id),
+  CONSTRAINT departmentofficers_reports_to_city_official_fkey FOREIGN KEY (reports_to_city_official_id) REFERENCES public.city_officials(id),
+  CONSTRAINT departmentofficers_reports_to_ward_officer_fkey FOREIGN KEY (reports_to_ward_officer_id) REFERENCES public.ward_officers(id)
 );
 CREATE TABLE public.departments (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -449,6 +503,15 @@ CREATE TABLE public.faqs (
   is_active boolean DEFAULT true,
   CONSTRAINT faqs_pkey PRIMARY KEY (id),
   CONSTRAINT faqs_department_id_fkey FOREIGN KEY (department_id) REFERENCES public.departments(id)
+);
+CREATE TABLE public.field_worker_states (
+  id integer NOT NULL DEFAULT nextval('field_worker_states_id_seq'::regclass),
+  user_id uuid NOT NULL,
+  date date NOT NULL,
+  state_data jsonb NOT NULL,
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT field_worker_states_pkey PRIMARY KEY (id),
+  CONSTRAINT field_worker_states_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.government_officials (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -750,6 +813,33 @@ CREATE TABLE public.official_relationships (
   CONSTRAINT official_relationships_official_id_fkey FOREIGN KEY (official_id) REFERENCES public.government_officials(id),
   CONSTRAINT official_relationships_related_official_id_fkey FOREIGN KEY (related_official_id) REFERENCES public.government_officials(id)
 );
+CREATE TABLE public.pending_registrations (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  telegram_user_id character varying UNIQUE,
+  whatsapp_phone character varying UNIQUE,
+  full_name character varying NOT NULL,
+  user_type character varying NOT NULL,
+  department_id uuid,
+  company_name character varying,
+  license_number character varying,
+  gst_number character varying,
+  category character varying,
+  specialization character varying,
+  zone character varying,
+  ward character varying,
+  email character varying,
+  phone character varying,
+  status character varying DEFAULT 'pending'::character varying,
+  reviewed_by uuid,
+  reviewed_at timestamp without time zone,
+  rejection_reason text,
+  channel character varying NOT NULL,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT pending_registrations_pkey PRIMARY KEY (id),
+  CONSTRAINT pending_registrations_department_id_fkey FOREIGN KEY (department_id) REFERENCES public.departments(id),
+  CONSTRAINT pending_registrations_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.users(id)
+);
 CREATE TABLE public.policydocuments (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   created_at timestamp with time zone DEFAULT now(),
@@ -955,6 +1045,14 @@ CREATE TABLE public.user_hierarchy (
   CONSTRAINT user_hierarchy_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
   CONSTRAINT user_hierarchy_supervisor_id_fkey FOREIGN KEY (supervisor_id) REFERENCES public.users(id)
 );
+CREATE TABLE public.user_temp_data (
+  telegram_user_id character varying NOT NULL,
+  phone_number character varying,
+  full_name character varying,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT user_temp_data_pkey PRIMARY KEY (telegram_user_id)
+);
 CREATE TABLE public.usergrievance (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   grievance_id character varying NOT NULL UNIQUE,
@@ -1007,6 +1105,9 @@ CREATE TABLE public.usergrievance (
   resolved_at timestamp with time zone,
   resolved_by uuid,
   embedding_status text DEFAULT 'pending'::text,
+  latitude numeric,
+  longitude numeric,
+  location_address text,
   CONSTRAINT usergrievance_pkey PRIMARY KEY (id),
   CONSTRAINT usergrievance_resolved_by_fkey FOREIGN KEY (resolved_by) REFERENCES public.users(id),
   CONSTRAINT usergrievance_citizen_id_fkey FOREIGN KEY (citizen_id) REFERENCES public.citizens(id),
@@ -1040,6 +1141,7 @@ CREATE TABLE public.users (
   city character varying,
   embedding USER-DEFINED,
   verification_token_expiry timestamp with time zone,
+  is_active boolean DEFAULT true,
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_department_id_fkey FOREIGN KEY (department_id) REFERENCES public.departments(id),
   CONSTRAINT users_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES public.users(id)
@@ -1055,9 +1157,17 @@ CREATE TABLE public.ward_officers (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   embedding USER-DEFINED,
+  city_id uuid,
+  district_id uuid,
+  ward_id uuid,
+  reports_to_city_official_id uuid,
   CONSTRAINT ward_officers_pkey PRIMARY KEY (id),
   CONSTRAINT ward_officers_reporting_to_fkey FOREIGN KEY (reporting_to) REFERENCES public.users(id),
-  CONSTRAINT ward_officers_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+  CONSTRAINT ward_officers_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT ward_officers_city_id_fkey FOREIGN KEY (city_id) REFERENCES public.cities(id),
+  CONSTRAINT ward_officers_district_id_fkey FOREIGN KEY (district_id) REFERENCES public.districts(id),
+  CONSTRAINT ward_officers_ward_id_fkey FOREIGN KEY (ward_id) REFERENCES public.wards(id),
+  CONSTRAINT ward_officers_reports_to_city_official_fkey FOREIGN KEY (reports_to_city_official_id) REFERENCES public.city_officials(id)
 );
 CREATE TABLE public.wards (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -1073,4 +1183,28 @@ CREATE TABLE public.wards (
   metadata jsonb DEFAULT '{}'::jsonb,
   CONSTRAINT wards_pkey PRIMARY KEY (id),
   CONSTRAINT wards_city_id_fkey FOREIGN KEY (city_id) REFERENCES public.cities(id)
+);
+CREATE TABLE public.whatsapp_conversations (
+  id integer NOT NULL DEFAULT nextval('whatsapp_conversations_id_seq'::regclass),
+  user_id character varying NOT NULL,
+  user_name character varying,
+  message text NOT NULL,
+  channel character varying DEFAULT 'whatsapp'::character varying,
+  message_id character varying,
+  is_bot boolean DEFAULT false,
+  created_at timestamp without time zone DEFAULT now(),
+  metadata jsonb,
+  CONSTRAINT whatsapp_conversations_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.whatsapp_media (
+  id integer NOT NULL DEFAULT nextval('whatsapp_media_id_seq'::regclass),
+  conversation_id integer,
+  media_type character varying,
+  media_url text,
+  blob_url text,
+  mime_type character varying,
+  file_size integer,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT whatsapp_media_pkey PRIMARY KEY (id),
+  CONSTRAINT whatsapp_media_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.whatsapp_conversations(id)
 );
