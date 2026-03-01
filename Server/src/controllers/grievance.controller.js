@@ -289,9 +289,12 @@ export const getGrievanceById = async (req, res) => {
     }
 
     const commentsResult = await pool.query(
-      `SELECT c.id, c.comment, c.is_internal, c.created_at, u.full_name as user_name, u.role
+      `SELECT c.id, c.comment, c.is_internal, c.created_at, 
+              COALESCE(u.full_name, cit.full_name) as user_name, 
+              COALESCE(u.role, 'citizen') as role
        FROM grievancecomments c
        LEFT JOIN users u ON c.user_id = u.id
+       LEFT JOIN citizens cit ON c.user_id = cit.id
        WHERE c.grievance_id = $1
        ORDER BY c.created_at ASC`,
       [grievanceId]
