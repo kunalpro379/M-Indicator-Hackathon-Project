@@ -1209,7 +1209,7 @@ const Grievances = () => {
                         <div className="comment-content">
                           <div className="comment-header">
                             <span className="comment-author">{comment.user_name || "User"}</span>
-                            <span className="comment-time">{formatDate(comment.timestamp)}</span>
+                            <span className="comment-time">{formatDate(comment.created_at || comment.timestamp)}</span>
                           </div>
                           <p className="comment-text">{comment.comment}</p>
                           {comment.is_internal && (
@@ -1243,15 +1243,14 @@ const Grievances = () => {
                         
                         setSubmittingComment(true);
                         try {
-                          await grievanceService.addComment(detail.grievance.id, {
-                            comment: newComment.trim(),
-                            user_id: user?.id,
-                            user_name: user?.name || user?.email || "Anonymous",
-                            is_internal: false
-                          });
+                          await grievanceService.addComment(
+                            detail.grievance.id, 
+                            newComment.trim(),
+                            false
+                          );
                           
                           // Refresh comments
-                          const updated = await grievanceService.getGrievanceById(detail.grievance.id);
+                          const updated = await grievanceService.getGrievanceById(detail.grievance.id, { viewAll: 'true' });
                           setDetail(updated);
                           setNewComment("");
                         } catch (error) {
